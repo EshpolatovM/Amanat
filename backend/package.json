@@ -1,0 +1,43 @@
+{
+  "name": "amanat-backend",
+  "version": "1.0.0",
+  "description": "Amanat - ota-ona moliyaviy nazorat platformasi backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "db:start": "pg_ctl -D \"$HOME/amanat-pgdata\" -l \"$HOME/amanat-pgdata/server.log\" -o \"-p 5433\" start",
+    "db:stop": "pg_ctl -D \"$HOME/amanat-pgdata\" stop",
+    "db:status": "pg_isready -h \"$HOME/amanat-pgdata\" -p 5433"
+  },
+  "keywords": [],
+  "type": "module",
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.6.0",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "telegraf": "^4.16.3",
+    "zod": "^4.6.5"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "@scarf/scarf": false,
+    "prisma@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "@prisma/client@6.19.3": true
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "prisma": "^6.19.3"
+  }
+}
