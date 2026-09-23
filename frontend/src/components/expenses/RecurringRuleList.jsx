@@ -23,14 +23,14 @@ export default function RecurringRuleList({ items, childId, readOnly = false }) 
   })
 
   if (!items?.length) {
-    return <p className="text-base font-semibold text-slate-700">Hali takrorlanuvchi xarajat qoidasi sozlanmagan.</p>
+    return <p className="text-base font-semibold text-ink-soft">Hali takrorlanuvchi xarajat qoidasi sozlanmagan.</p>
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col divide-y divide-line overflow-hidden rounded-2xl border-2 border-line">
       {items.map((item) => {
-        // Maqsadga bog'langan qoida "Maqsadli xarajat" (yashil), maqsadsizi
-        // klassik "Kundalik xarajat" (sariq) sifatida ko'rsatiladi.
+        // Maqsadga bog'langan qoida "Maqsadli xarajat" (forest), maqsadsizi
+        // klassik "Kundalik xarajat" (bronze) sifatida ko'rsatiladi.
         const style = item.goal ? EXPENSE_TYPE_STYLES.planned : EXPENSE_TYPE_STYLES.recurring
         const scheduleLabel =
           item.frequency === 'monthly'
@@ -40,22 +40,22 @@ export default function RecurringRuleList({ items, childId, readOnly = false }) 
         return (
           <div
             key={item.id}
-            className={`flex items-center justify-between rounded-2xl border-2 ${style.border} ${style.bg} px-4 py-3`}
+            className={`flex items-center justify-between border-l-4 ${style.border} bg-paper px-4 py-3`}
           >
             <div>
               <p className={`text-base font-bold ${style.text}`}>{item.goal ? item.goal.name : 'Kundalik xarajat'}</p>
-              <p className="text-sm font-semibold text-slate-700">
+              <p className="text-sm font-semibold text-ink-soft">
                 {scheduleLabel} — {item.active ? 'Faol' : "To'xtatilgan"}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <p className="text-lg font-bold text-slate-900">{formatMoney(item.amount)}</p>
+              <p className="text-lg font-bold text-ink">{formatMoney(item.amount)}</p>
               {!readOnly && (
                 <>
                   <button
                     type="button"
                     onClick={() => toggleMutation.mutate({ id: item.id, active: !item.active })}
-                    className={`text-sm font-semibold underline ${style.text}`}
+                    className={`text-sm font-semibold underline opacity-90 transition-opacity hover:opacity-100 ${style.text}`}
                   >
                     {item.active ? "To'xtatish" : 'Faollashtirish'}
                   </button>
@@ -63,7 +63,7 @@ export default function RecurringRuleList({ items, childId, readOnly = false }) 
                     type="button"
                     onClick={() => deleteMutation.mutate(item.id)}
                     aria-label="O'chirish"
-                    className="text-slate-700"
+                    className="text-ink-soft transition-colors hover:text-alert"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>

@@ -1,1 +1,42 @@
 @import "tailwindcss";
+
+@theme {
+  --color-paper: #F7F3EC;
+  --color-card: #FCFAF4;
+  --color-ink: #2B2620;
+  --color-ink-soft: #6B5E4F;
+  --color-line: #E3D6C3;
+  --color-forest: #3E5C4E;
+  --color-forest-dark: #2C463A;
+  --color-forest-soft: #E7EEE7;
+  --color-bronze: #B8895B;
+  --color-bronze-dark: #966B44;
+  --color-bronze-soft: #F3E9DA;
+  --color-alert: #A44A3F;
+  --color-alert-dark: #82372E;
+  --color-alert-soft: #F5E4DF;
+  --color-success: #5C7A5A;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: 'Fraunces', ui-serif, Georgia, serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a,
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+}

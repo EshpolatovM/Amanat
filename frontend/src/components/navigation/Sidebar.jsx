@@ -25,18 +25,18 @@ export default function Sidebar({ status = 'good' }) {
 
   return (
     <>
-      <aside className="fixed inset-y-4 left-4 z-40 hidden w-72 flex-col rounded-[2rem] border-2 border-slate-300 bg-white px-4 py-8 shadow-lg lg:flex">
-        <span className="mb-8 px-2 text-2xl font-bold text-slate-900">Amanat</span>
+      <aside className="fixed inset-y-4 left-4 z-40 hidden w-72 flex-col rounded-[2rem] border-2 border-line bg-card px-4 py-8 shadow-lg lg:flex">
+        <span className="mb-8 px-2 text-2xl font-serif font-semibold text-ink">Amanat</span>
 
         <button
           type="button"
           onClick={() => setModalOpen(true)}
           className={`
             mb-6 flex h-16 items-center justify-center gap-2 rounded-2xl
-            border-b-4 ${accent.plusBorder} ${accent.plusBg} text-lg font-bold text-white
+            border-b-2 ${accent.plusBorder} ${accent.plusBg} text-lg font-bold text-white
             shadow-lg transition-all duration-100 ease-in-out
-            hover:translate-y-0.5 hover:border-b-[3px]
-            active:translate-y-1 active:border-b-0 active:shadow-none
+            hover:translate-y-px hover:border-b-px
+            active:translate-y-0.5 active:border-b-0 active:shadow-none
           `}
         >
           <Plus className="h-6 w-6" strokeWidth={3} />
@@ -54,7 +54,7 @@ export default function Sidebar({ status = 'good' }) {
                 className={
                   active
                     ? `flex items-center gap-3 rounded-xl border-2 ${accent.activeBorder} ${accent.activeBg} px-4 py-4 text-base font-bold ${accent.text}`
-                    : 'flex items-center gap-3 rounded-xl border-2 border-transparent px-4 py-4 text-base font-bold text-slate-700 hover:bg-slate-50'
+                    : 'flex items-center gap-3 rounded-xl border-2 border-transparent px-4 py-4 text-base font-bold text-ink-soft hover:bg-paper'
                 }
               >
                 <Icon className="h-7 w-7" strokeWidth={active ? 2.5 : 2} />

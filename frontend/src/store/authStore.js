@@ -60,6 +60,10 @@ export const useAuthStore = create((set) => ({
     }
   },
 
+  updateUser(patch) {
+    set((state) => ({ user: state.user ? { ...state.user, ...patch } : state.user }))
+  },
+
   clearError() {
     set({ error: null })
   },

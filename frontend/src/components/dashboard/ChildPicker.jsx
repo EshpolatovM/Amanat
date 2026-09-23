@@ -6,8 +6,8 @@ export default function ChildPicker({ childOptions, value, onChange }) {
         onClick={() => onChange(null)}
         className={
           value === null
-            ? 'rounded-full bg-green-600 px-4 py-2 text-base font-bold text-white'
-            : 'rounded-full border-2 border-slate-300 px-4 py-2 text-base font-semibold text-slate-700'
+            ? 'rounded-full bg-forest px-4 py-2 text-base font-bold text-white transition-colors hover:bg-forest-dark'
+            : 'rounded-full border-2 border-line px-4 py-2 text-base font-semibold text-ink-soft transition-colors hover:bg-paper'
         }
       >
         Barchasi
@@ -19,8 +19,8 @@ export default function ChildPicker({ childOptions, value, onChange }) {
           onClick={() => onChange(child.id)}
           className={
             value === child.id
-              ? 'rounded-full bg-green-600 px-4 py-2 text-base font-bold text-white'
-              : 'rounded-full border-2 border-slate-300 px-4 py-2 text-base font-semibold text-slate-700'
+              ? 'rounded-full bg-forest px-4 py-2 text-base font-bold text-white transition-colors hover:bg-forest-dark'
+              : 'rounded-full border-2 border-line px-4 py-2 text-base font-semibold text-ink-soft transition-colors hover:bg-paper'
           }
         >
           {child.firstName}

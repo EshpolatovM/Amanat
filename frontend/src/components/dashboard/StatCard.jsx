@@ -14,7 +14,7 @@ export default function StatCard({ type, amount, variant = 'parent' }) {
       }
     >
       <p className={`text-base font-bold ${style.text}`}>{style.label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-900">{formatMoney(amount)}</p>
+      <p className="mt-1 text-2xl font-bold text-ink">{formatMoney(amount)}</p>
     </div>
   )
 }

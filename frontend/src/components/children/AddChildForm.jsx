@@ -47,19 +47,19 @@ export default function AddChildForm() {
   return (
     <div className="flex flex-col gap-4">
       {createdCredentials && (
-        <div className="rounded-2xl border-2 border-green-500 bg-green-50 p-4">
-          <p className="text-lg font-bold text-slate-900">Bola profili yaratildi</p>
+        <div className="rounded-2xl border-2 border-forest bg-forest-soft p-4">
+          <p className="text-lg font-bold text-ink">Bola profili yaratildi</p>
           <div className="mt-3 flex flex-col gap-2">
-            <CredentialChip label="Kirish ID" value={createdCredentials.loginId} tone="green" />
-            <CredentialChip label="Parol" value={createdCredentials.password} tone="green" />
+            <CredentialChip label="Kirish ID" value={createdCredentials.loginId} tone="forest" />
+            <CredentialChip label="Parol" value={createdCredentials.password} tone="forest" />
           </div>
-          <p className="mt-3 text-sm font-semibold text-red-600">
+          <p className="mt-3 text-sm font-semibold text-alert">
             Parolni saqlab qo'ying — u qayta ko'rsatilmaydi.
           </p>
           <button
             type="button"
             onClick={() => setCreatedCredentials(null)}
-            className="mt-3 text-base font-semibold text-green-600"
+            className="mt-3 text-base font-semibold text-forest underline transition-colors hover:text-forest"
           >
             Yopish
           </button>
@@ -71,10 +71,10 @@ export default function AddChildForm() {
           type="button"
           onClick={() => setIsOpen(true)}
           className="
-            h-14 rounded-2xl border-b-4 border-green-800 bg-green-600 text-base font-bold text-white
+            h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-base font-bold text-white
             shadow-lg transition-all duration-100 ease-in-out
-            hover:translate-y-0.5 hover:border-b-[3px]
-            active:translate-y-1 active:border-b-0 active:shadow-none
+            hover:translate-y-px hover:border-b-px
+            active:translate-y-0.5 active:border-b-0 active:shadow-none
           "
         >
           + Bola qo'shish
@@ -87,17 +87,17 @@ export default function AddChildForm() {
           <TextField label="Familiya" error={errors.lastName?.message} {...register('lastName')} />
           <TextField label="Yosh" type="number" error={errors.age?.message} {...register('age')} />
 
-          {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+          {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
 
           <div className="flex gap-3">
             <button
               type="submit"
               disabled={isSubmitting}
               className="
-                h-14 flex-1 rounded-2xl border-b-4 border-green-800 bg-green-600 text-base font-bold text-white
+                h-14 flex-1 rounded-2xl border-b-2 border-forest-dark bg-forest text-base font-bold text-white
                 shadow-lg transition-all duration-100 ease-in-out
-                hover:translate-y-0.5 hover:border-b-[3px]
-                active:translate-y-1 active:border-b-0 active:shadow-none
+                hover:translate-y-px hover:border-b-px
+                active:translate-y-0.5 active:border-b-0 active:shadow-none
                 disabled:opacity-70
               "
             >
@@ -106,7 +106,7 @@ export default function AddChildForm() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="h-14 flex-1 rounded-2xl border-2 border-slate-300 text-base font-bold text-slate-700"
+              className="h-14 flex-1 rounded-2xl border-2 border-line text-base font-bold text-ink-soft transition-colors hover:bg-paper"
             >
               Bekor qilish
             </button>

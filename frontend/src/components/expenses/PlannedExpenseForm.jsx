@@ -75,10 +75,10 @@ export default function PlannedExpenseForm({ childId, onSuccess }) {
   return (
     <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="flex flex-col gap-4" noValidate>
       <label className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold text-slate-900">Maqsad</span>
+        <span className="text-base font-semibold text-ink">Maqsad</span>
         <select
           {...register('goalId')}
-          className="h-14 rounded-2xl border-2 border-slate-300 bg-white px-4 text-lg text-slate-900 outline-none focus:border-green-600"
+          className="h-14 rounded-2xl border-2 border-line bg-card px-4 text-lg text-ink outline-none focus:border-forest"
         >
           <option value="">Tanlang...</option>
           {goals?.map((goal) => (
@@ -88,7 +88,7 @@ export default function PlannedExpenseForm({ childId, onSuccess }) {
           ))}
           <option value={NEW_GOAL}>+ Yangi maqsad</option>
         </select>
-        {errors.goalId && <span className="text-base font-semibold text-red-600">{errors.goalId.message}</span>}
+        {errors.goalId && <span className="text-base font-semibold text-alert">{errors.goalId.message}</span>}
       </label>
 
       {selectedGoalId === NEW_GOAL && (
@@ -104,16 +104,16 @@ export default function PlannedExpenseForm({ childId, onSuccess }) {
       <TextField label="Sana" type="date" error={errors.date?.message} {...register('date')} />
       <TextField label="Izoh (ixtiyoriy)" error={errors.comment?.message} {...register('comment')} />
 
-      {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
 
       <button
         type="submit"
         disabled={isSubmitting}
         className="
-          h-14 rounded-2xl border-b-4 border-green-800 bg-green-600 text-lg font-bold text-white
+          h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
           shadow-lg transition-all duration-100 ease-in-out
-          hover:translate-y-0.5 hover:border-b-[3px]
-          active:translate-y-1 active:border-b-0 active:shadow-none
+          hover:translate-y-px hover:border-b-px
+          active:translate-y-0.5 active:border-b-0 active:shadow-none
           disabled:opacity-70
         "
       >

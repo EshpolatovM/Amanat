@@ -2,9 +2,9 @@ import { EXPENSE_TYPE_STYLES } from '../../components/dashboard/expenseTypeStyle
 
 function Section({ title, children }) {
   return (
-    <section className="flex flex-col gap-2 border-b-2 border-slate-200 pb-6 last:border-b-0 last:pb-0">
-      <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-      <div className="flex flex-col gap-2 text-base font-semibold text-slate-700">{children}</div>
+    <section className="flex flex-col gap-2 border-b-2 border-line pb-6 last:border-b-0 last:pb-0">
+      <h2 className="text-xl font-serif font-semibold text-ink">{title}</h2>
+      <div className="flex flex-col gap-2 text-base font-semibold text-ink-soft">{children}</div>
     </section>
   )
 }
@@ -14,7 +14,7 @@ function TypeBadge({ type, children }) {
   return (
     <div className={`rounded-2xl border-2 ${style.border} ${style.bg} p-4`}>
       <p className={`text-base font-bold ${style.text}`}>{style.label}</p>
-      <p className="mt-1 text-base font-semibold text-slate-700">{children}</p>
+      <p className="mt-1 text-base font-semibold text-ink-soft">{children}</p>
     </div>
   )
 }
@@ -23,8 +23,8 @@ export default function Help() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Yordam</h1>
-        <p className="mt-2 text-base font-semibold text-slate-700">
+        <h1 className="text-3xl font-serif font-semibold text-ink">Yordam</h1>
+        <p className="mt-2 text-base font-semibold text-ink-soft">
           Amanat qanday ishlashi va har bir bo'lim nima uchun kerakligi — shu yerda.
         </p>
       </div>

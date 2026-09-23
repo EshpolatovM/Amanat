@@ -30,10 +30,10 @@ export default function Dashboard() {
   if (children && children.length === 0) {
     return (
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Bosh sahifa</h1>
-        <p className="mt-3 text-base font-semibold text-slate-700">
+        <h1 className="text-3xl font-serif font-semibold text-ink">Bosh sahifa</h1>
+        <p className="mt-3 text-base font-semibold text-ink-soft">
           Hali farzand profili qo'shilmagan.{' '}
-          <Link to="/profile" className="text-green-600">
+          <Link to="/profile" className="text-forest underline transition-colors hover:text-forest">
             Profilga o'tib qo'shing
           </Link>
           .
@@ -45,8 +45,8 @@ export default function Dashboard() {
   if (isLoading || !data) {
     return (
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Bosh sahifa</h1>
-        <p className="mt-3 text-base font-semibold text-slate-700">Yuklanmoqda...</p>
+        <h1 className="text-3xl font-serif font-semibold text-ink">Bosh sahifa</h1>
+        <p className="mt-3 text-base font-semibold text-ink-soft">Yuklanmoqda...</p>
       </div>
     )
   }
@@ -55,7 +55,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold text-slate-900">Bosh sahifa</h1>
+      <h1 className="text-3xl font-serif font-semibold text-ink">Bosh sahifa</h1>
 
       {showPicker && <ChildPicker childOptions={children} value={selectedChildId} onChange={setSelectedChildId} />}
 
@@ -68,7 +68,7 @@ export default function Dashboard() {
           {showPicker && selectedChildId === null && <ByChildBreakdown byChild={data.byChild} />}
 
           <div>
-            <h2 className="mb-3 text-xl font-bold text-slate-900">So'nggi harakatlar</h2>
+            <h2 className="mb-3 text-xl font-serif font-semibold text-ink">So'nggi harakatlar</h2>
             <RecentActivityList
               items={data.recent}
               childNameById={childNameById}

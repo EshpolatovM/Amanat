@@ -1,9 +1,9 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatMoney, formatMoneyCompact } from '../../lib/money'
 
-// dataviz skill: mavjud CategoryBreakdownChart'dagi validatsiya qilingan yashil
-// (#0ca30c) rang bilan bir xil — bitta seriya bo'lgani uchun legend shart emas.
-const LINE_COLOR = '#0ca30c'
+// dataviz skill: bitta seriya — kategorik CVD tekshiruvi shart emas, faqat fon
+// kontrasti kerak. Brend asosiy rangi (--color-forest) ishlatiladi.
+const LINE_COLOR = '#3E5C4E'
 
 const UZ_MONTHS_SHORT = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
 
@@ -21,8 +21,8 @@ function ChartTooltip({ active, payload }) {
   const item = payload[0].payload
 
   return (
-    <div className="rounded-xl border-2 border-slate-300 bg-white px-3 py-2 shadow-lg">
-      <p className="text-sm font-bold text-slate-900">{item.label}</p>
+    <div className="rounded-xl border-2 border-line bg-card px-3 py-2 shadow-lg">
+      <p className="text-sm font-bold text-ink">{item.label}</p>
       <p className="text-base font-bold" style={{ color: LINE_COLOR }}>
         {formatMoney(item.value)}
       </p>
@@ -39,10 +39,10 @@ export default function TrendChart({ trend, period }) {
   const tickInterval = Math.max(0, Math.floor(data.length / 6))
 
   return (
-    <div className="rounded-3xl border-2 border-slate-300 bg-white p-4 sm:p-6">
+    <div className="rounded-3xl border-2 border-line bg-card p-4 sm:p-6">
       {!hasData ? (
         <div className="flex h-80 items-center justify-center sm:h-96">
-          <p className="text-base font-semibold text-slate-700">
+          <p className="text-base font-semibold text-ink-soft">
             Xarajat kiritilgach, diagramma shu yerda ko'rinadi.
           </p>
         </div>
@@ -56,18 +56,18 @@ export default function TrendChart({ trend, period }) {
                   <stop offset="100%" stopColor={LINE_COLOR} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} stroke="#E2E8F0" />
+              <CartesianGrid vertical={false} stroke="#E3D6C3" />
               <XAxis
                 dataKey="label"
                 tickLine={false}
-                axisLine={{ stroke: '#CBD5E1' }}
-                tick={{ fill: '#334155', fontSize: 13, fontWeight: 600 }}
+                axisLine={{ stroke: '#E3D6C3' }}
+                tick={{ fill: '#6B5E4F', fontSize: 13, fontWeight: 600 }}
                 interval={tickInterval}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tick={{ fill: '#334155', fontSize: 12, fontWeight: 600 }}
+                tick={{ fill: '#6B5E4F', fontSize: 12, fontWeight: 600 }}
                 tickFormatter={(value) => formatMoneyCompact(value, { suffix: '' }).trim()}
                 width={52}
               />
@@ -82,7 +82,7 @@ export default function TrendChart({ trend, period }) {
                 strokeWidth={2}
                 fill="url(#trendFill)"
                 dot={false}
-                activeDot={{ r: 5, fill: LINE_COLOR, stroke: '#fff', strokeWidth: 2 }}
+                activeDot={{ r: 5, fill: LINE_COLOR, stroke: '#FCFAF4', strokeWidth: 2 }}
               />
             </AreaChart>
           </ResponsiveContainer>

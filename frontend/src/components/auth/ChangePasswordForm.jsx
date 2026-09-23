@@ -48,8 +48,8 @@ export default function ChangePasswordForm() {
   return (
     <div>
       {success && !isOpen && (
-        <div className="rounded-2xl border-2 border-green-500 bg-green-50 p-3">
-          <p className="text-base font-semibold text-slate-700">Parol muvaffaqiyatli o'zgartirildi.</p>
+        <div className="rounded-2xl border-2 border-forest bg-forest-soft p-3">
+          <p className="text-base font-semibold text-ink-soft">Parol muvaffaqiyatli o'zgartirildi.</p>
         </div>
       )}
 
@@ -60,7 +60,7 @@ export default function ChangePasswordForm() {
             setSuccess(false)
             setIsOpen(true)
           }}
-          className="h-14 rounded-2xl border-2 border-slate-300 px-4 text-base font-bold text-slate-700"
+          className="h-14 rounded-2xl border-2 border-line px-4 text-base font-bold text-ink-soft transition-colors hover:bg-paper"
         >
           Parolni o'zgartirish
         </button>
@@ -87,17 +87,17 @@ export default function ChangePasswordForm() {
             {...register('confirmNewPassword')}
           />
 
-          {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+          {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
 
           <div className="flex gap-3">
             <button
               type="submit"
               disabled={isSubmitting}
               className="
-                h-14 flex-1 rounded-2xl border-b-4 border-green-800 bg-green-600 text-base font-bold text-white
+                h-14 flex-1 rounded-2xl border-b-2 border-forest-dark bg-forest text-base font-bold text-white
                 shadow-lg transition-all duration-100 ease-in-out
-                hover:translate-y-0.5 hover:border-b-[3px]
-                active:translate-y-1 active:border-b-0 active:shadow-none
+                hover:translate-y-px hover:border-b-px
+                active:translate-y-0.5 active:border-b-0 active:shadow-none
                 disabled:opacity-70
               "
             >
@@ -106,7 +106,7 @@ export default function ChangePasswordForm() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="h-14 flex-1 rounded-2xl border-2 border-slate-300 text-base font-bold text-slate-700"
+              className="h-14 flex-1 rounded-2xl border-2 border-line text-base font-bold text-ink-soft transition-colors hover:bg-paper"
             >
               Bekor qilish
             </button>

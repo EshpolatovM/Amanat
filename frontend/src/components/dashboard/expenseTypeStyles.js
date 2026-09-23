@@ -1,25 +1,25 @@
 // amanat-design-system.md 2/4-bo'limidagi status ranglari bilan bir xil:
-// maqsadli -> yashil, kundalik/avtomatik -> sariq, kutilmagan -> qizil.
+// maqsadli -> forest, kundalik/avtomatik -> bronze, kutilmagan -> alert.
 export const EXPENSE_TYPE_STYLES = {
   planned: {
     label: 'Maqsadli xarajat',
-    border: 'border-green-500',
-    bg: 'bg-green-50',
-    text: 'text-green-700',
-    dot: 'bg-green-500',
+    border: 'border-forest',
+    bg: 'bg-forest-soft',
+    text: 'text-forest',
+    dot: 'bg-forest',
   },
   recurring: {
     label: 'Kundalik xarajat',
-    border: 'border-yellow-500',
-    bg: 'bg-yellow-50',
-    text: 'text-yellow-700',
-    dot: 'bg-yellow-500',
+    border: 'border-bronze',
+    bg: 'bg-bronze-soft',
+    text: 'text-bronze-dark',
+    dot: 'bg-bronze',
   },
   unplanned: {
     label: 'Kutilmagan xarajat',
-    border: 'border-red-500',
-    bg: 'bg-red-50',
-    text: 'text-red-700',
-    dot: 'bg-red-500',
+    border: 'border-alert',
+    bg: 'bg-alert-soft',
+    text: 'text-alert',
+    dot: 'bg-alert',
   },
 }

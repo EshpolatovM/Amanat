@@ -50,7 +50,7 @@ export default function Statistics() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold text-slate-900">Statistika</h1>
+      <h1 className="text-3xl font-serif font-semibold text-ink">Statistika</h1>
 
       {showPicker && <ChildPicker childOptions={children} value={childId} onChange={setChildId} />}
 
@@ -68,7 +68,7 @@ export default function Statistics() {
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-slate-900">Xarajat dinamikasi</h2>
+          <h2 className="text-xl font-serif font-semibold text-ink">Xarajat dinamikasi</h2>
           <div className="flex gap-2">
             {CHART_PERIODS.map((option) => (
               <button
@@ -77,8 +77,8 @@ export default function Statistics() {
                 onClick={() => setChartPeriod(option.value)}
                 className={
                   chartPeriod === option.value
-                    ? 'rounded-full bg-green-600 px-4 py-2 text-sm font-bold text-white'
-                    : 'rounded-full border-2 border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700'
+                    ? 'rounded-full bg-forest px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-forest-dark'
+                    : 'rounded-full border-2 border-line px-4 py-2 text-sm font-semibold text-ink-soft transition-colors hover:bg-paper'
                 }
               >
                 {option.label}

@@ -6,6 +6,11 @@ export async function fetchChildren() {
   return data.data
 }
 
+export async function updateChild(childId, payload) {
+  const { data } = await apiClient.patch(`/children/${childId}`, payload)
+  return data.data
+}
+
 // Bola paroli hech qachon qayta o'qib bo'lmaydi (backend faqat hash saqlaydi),
 // shuning uchun "yo'qolgan parol" muammosi eskisini ko'rsatish bilan emas,
 // yangi 6 xonali parol generatsiya qilib qo'yish bilan hal qilinadi.

@@ -28,7 +28,10 @@ const schema = z
     newGoalName: z.string().trim().optional(),
     amount: z.coerce.number().int().positive("Summa 0 dan katta bo'lishi kerak"),
     frequency: z.enum(['weekly', 'monthly']),
-    dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
+    dayOfMonth: z.preprocess(
+      (val) => (val === '' || val === undefined ? undefined : val),
+      z.coerce.number().int().min(1).max(31).optional(),
+    ),
     startDate: z.string().min(1, 'Boshlanish sanasi kiritilishi shart'),
     endDate: z.string().optional(),
     comment: z.string().trim().max(500).optional(),
@@ -139,10 +142,11 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
       <label className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold text-slate-900">Maqsad (ixtiyoriy)</span>
+        <span className="text-base font-semibold text-ink">Maqsad (ixtiyoriy)</span>
         <select
           {...register('goalId')}
-          className="h-14 rounded-2xl border-2 border-slate-300 bg-white px-4 text-lg text-slate-900 outline-none focus:border-green-600"
+          value={selectedGoalId}
+          className="h-14 rounded-2xl border-2 border-line bg-card px-4 text-lg text-ink outline-none focus:border-forest"
         >
           <option value="">— Kundalik xarajat (maqsadsiz) —</option>
           {goals?.map((goal) => (
@@ -152,7 +156,7 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
           ))}
           <option value={NEW_GOAL}>+ Yangi maqsad</option>
         </select>
-        <span className="text-sm font-semibold text-slate-700">
+        <span className="text-sm font-semibold text-ink-soft">
           Maqsad tanlansa (masalan "Kurs puli"), summa avtomatik shu maqsadga qo'shiladi.
         </span>
       </label>
@@ -167,13 +171,13 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
       )}
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold text-slate-900">Takrorlanish</span>
+        <span className="text-base font-semibold text-ink">Takrorlanish</span>
         <div className="flex gap-2">
           <label
             className={
               frequency === 'weekly'
-                ? 'flex-1 cursor-pointer rounded-2xl border-2 border-yellow-500 bg-yellow-50 px-3 py-3 text-center text-sm font-bold text-yellow-700'
-                : 'flex-1 cursor-pointer rounded-2xl border-2 border-slate-300 px-3 py-3 text-center text-sm font-bold text-slate-700'
+                ? 'flex-1 cursor-pointer rounded-2xl border-2 border-bronze bg-bronze-soft px-3 py-3 text-center text-sm font-bold text-bronze-dark transition-colors'
+                : 'flex-1 cursor-pointer rounded-2xl border-2 border-line px-3 py-3 text-center text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
             }
           >
             <input type="radio" value="weekly" {...register('frequency')} className="sr-only" />
@@ -182,8 +186,8 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
           <label
             className={
               frequency === 'monthly'
-                ? 'flex-1 cursor-pointer rounded-2xl border-2 border-yellow-500 bg-yellow-50 px-3 py-3 text-center text-sm font-bold text-yellow-700'
-                : 'flex-1 cursor-pointer rounded-2xl border-2 border-slate-300 px-3 py-3 text-center text-sm font-bold text-slate-700'
+                ? 'flex-1 cursor-pointer rounded-2xl border-2 border-bronze bg-bronze-soft px-3 py-3 text-center text-sm font-bold text-bronze-dark transition-colors'
+                : 'flex-1 cursor-pointer rounded-2xl border-2 border-line px-3 py-3 text-center text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
             }
           >
             <input type="radio" value="monthly" {...register('frequency')} className="sr-only" />
@@ -194,7 +198,7 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
 
       {frequency === 'weekly' && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-base font-semibold text-slate-900">Kunlar</span>
+          <span className="text-base font-semibold text-ink">Kunlar</span>
           <div className="flex flex-wrap gap-2">
             {DAYS.map((day) => {
               const active = days.includes(day.value)
@@ -205,8 +209,8 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
                   onClick={() => toggleDay(day.value)}
                   className={
                     active
-                      ? 'h-12 w-14 rounded-xl border-2 border-yellow-500 bg-yellow-50 text-sm font-bold text-yellow-700'
-                      : 'h-12 w-14 rounded-xl border-2 border-slate-300 text-sm font-bold text-slate-700'
+                      ? 'h-12 w-14 rounded-xl border-2 border-bronze bg-bronze-soft text-sm font-bold text-bronze-dark transition-colors'
+                      : 'h-12 w-14 rounded-xl border-2 border-line text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
                   }
                 >
                   {day.label}
@@ -214,7 +218,7 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
               )
             })}
           </div>
-          {daysError && <span className="text-base font-semibold text-red-600">{daysError}</span>}
+          {daysError && <span className="text-base font-semibold text-alert">{daysError}</span>}
         </div>
       )}
 
@@ -235,16 +239,16 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
       <TextField label="Tugash sanasi (ixtiyoriy)" type="date" error={errors.endDate?.message} {...register('endDate')} />
       <TextField label="Izoh (ixtiyoriy)" error={errors.comment?.message} {...register('comment')} />
 
-      {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
 
       <button
         type="submit"
         disabled={isSubmitting}
         className="
-          h-14 rounded-2xl border-b-4 border-yellow-700 bg-yellow-500 text-lg font-bold text-white
+          h-14 rounded-2xl border-b-2 border-bronze-dark bg-bronze text-lg font-bold text-white
           shadow-lg transition-all duration-100 ease-in-out
-          hover:translate-y-0.5 hover:border-b-[3px]
-          active:translate-y-1 active:border-b-0 active:shadow-none
+          hover:translate-y-px hover:border-b-px
+          active:translate-y-0.5 active:border-b-0 active:shadow-none
           disabled:opacity-70
         "
       >

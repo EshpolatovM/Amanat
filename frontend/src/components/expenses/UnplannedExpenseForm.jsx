@@ -52,16 +52,16 @@ export default function UnplannedExpenseForm({ childId, onSuccess }) {
       />
       <TextField label="Sana" type="date" error={errors.date?.message} {...register('date')} />
 
-      {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
 
       <button
         type="submit"
         disabled={isSubmitting}
         className="
-          h-14 rounded-2xl border-b-4 border-red-800 bg-red-500 text-lg font-bold text-white
+          h-14 rounded-2xl border-b-2 border-alert-dark bg-alert text-lg font-bold text-white
           shadow-lg transition-all duration-100 ease-in-out
-          hover:translate-y-0.5 hover:border-b-[3px]
-          active:translate-y-1 active:border-b-0 active:shadow-none
+          hover:translate-y-px hover:border-b-px
+          active:translate-y-0.5 active:border-b-0 active:shadow-none
           disabled:opacity-70
         "
       >

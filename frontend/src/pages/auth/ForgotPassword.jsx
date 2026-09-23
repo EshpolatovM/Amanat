@@ -40,8 +40,8 @@ const passwordSchema = z
 
 function Card({ children }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-sm rounded-3xl border-2 border-slate-300 bg-white p-8 shadow-lg">{children}</div>
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
+      <div className="w-full max-w-sm rounded-3xl border-2 border-line bg-card p-8 shadow-lg">{children}</div>
     </div>
   )
 }
@@ -52,10 +52,10 @@ function SubmitButton({ children, disabled }) {
       type="submit"
       disabled={disabled}
       className="
-        mt-2 h-14 rounded-2xl border-b-4 border-green-800 bg-green-600 text-lg font-bold text-white
+        mt-2 h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
         shadow-lg transition-all duration-100 ease-in-out
-        hover:translate-y-0.5 hover:border-b-[3px]
-        active:translate-y-1 active:border-b-0 active:shadow-none
+        hover:translate-y-px hover:border-b-px
+        active:translate-y-0.5 active:border-b-0 active:shadow-none
         disabled:opacity-70
       "
     >
@@ -80,8 +80,8 @@ export default function ForgotPassword() {
 
   return (
     <Card>
-      <h1 className="text-center text-3xl font-bold text-slate-900">Amanat</h1>
-      <p className="mt-1 text-center text-base font-semibold text-slate-700">Parolni tiklash</p>
+      <h1 className="text-center text-3xl font-serif font-semibold text-ink">Amanat</h1>
+      <p className="mt-1 text-center text-base font-semibold text-ink-soft">Parolni tiklash</p>
 
       {step === 'phone' && (
         <PhoneStep
@@ -119,17 +119,17 @@ export default function ForgotPassword() {
 
       {step === 'done' && (
         <div className="mt-6 flex flex-col gap-4">
-          <p className="text-center text-base font-semibold text-slate-700">
+          <p className="text-center text-base font-semibold text-ink-soft underline transition-colors hover:text-ink">
             Parolingiz muvaffaqiyatli yangilandi. Endi yangi parol bilan tizimga kirishingiz mumkin.
           </p>
           <button
             type="button"
             onClick={() => navigate('/login', { replace: true })}
             className="
-              h-14 rounded-2xl border-b-4 border-green-800 bg-green-600 text-lg font-bold text-white
+              h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
               shadow-lg transition-all duration-100 ease-in-out
-              hover:translate-y-0.5 hover:border-b-[3px]
-              active:translate-y-1 active:border-b-0 active:shadow-none
+              hover:translate-y-px hover:border-b-px
+              active:translate-y-0.5 active:border-b-0 active:shadow-none
             "
           >
             Kirish sahifasiga o'tish
@@ -138,8 +138,8 @@ export default function ForgotPassword() {
       )}
 
       {step !== 'done' && (
-        <p className="mt-6 text-center text-base font-semibold text-slate-700">
-          <Link to="/login" className="text-green-600">
+        <p className="mt-6 text-center text-base font-semibold text-ink-soft">
+          <Link to="/login" className="text-forest underline transition-colors hover:text-forest">
             Kirish sahifasiga qaytish
           </Link>
         </p>
@@ -164,7 +164,7 @@ function PhoneStep({ onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-6 flex flex-col gap-4" noValidate>
-      <p className="text-base font-semibold text-slate-700">
+      <p className="text-base font-semibold text-ink-soft">
         Ro'yxatdan o'tgan telefon raqamingizni kiriting. Parolni tiklash uchun Telegram bot orqali tasdiqlaysiz.
       </p>
       <TextField
@@ -173,7 +173,7 @@ function PhoneStep({ onSuccess }) {
         error={errors.phone?.message}
         {...register('phone')}
       />
-      {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
       <SubmitButton disabled={isSubmitting || mutation.isPending}>
         {mutation.isPending ? 'Kuting...' : 'Davom etish'}
       </SubmitButton>
@@ -198,7 +198,7 @@ function TelegramStep({ requestId, botDeepLink, onVerified, onRestart }) {
 
   return (
     <div className="mt-6 flex flex-col gap-4">
-      <p className="text-base font-semibold text-slate-700">
+      <p className="text-base font-semibold text-ink-soft">
         1. Quyidagi tugma orqali Telegram botni oching va <strong>Start</strong> bosing.
         <br />
         2. Bot so'ragan tugma orqali telefon raqamingizni ulashing.
@@ -208,13 +208,13 @@ function TelegramStep({ requestId, botDeepLink, onVerified, onRestart }) {
 
       {expired ? (
         <>
-          <p className="text-base font-semibold text-red-600">
+          <p className="text-base font-semibold text-alert">
             So'rov muddati tugagan yoki topilmadi. Qaytadan boshlang.
           </p>
           <button
             type="button"
             onClick={onRestart}
-            className="h-14 rounded-2xl border-2 border-slate-300 text-lg font-bold text-slate-900"
+            className="h-14 rounded-2xl border-2 border-line text-lg font-bold text-ink transition-colors hover:bg-paper"
           >
             Qaytadan boshlash
           </button>
@@ -226,15 +226,15 @@ function TelegramStep({ requestId, botDeepLink, onVerified, onRestart }) {
             target="_blank"
             rel="noreferrer"
             className="
-              flex h-14 items-center justify-center rounded-2xl border-b-4 border-green-800 bg-green-600
+              flex h-14 items-center justify-center rounded-2xl border-b-2 border-forest-dark bg-forest
               text-lg font-bold text-white shadow-lg transition-all duration-100 ease-in-out
-              hover:translate-y-0.5 hover:border-b-[3px]
-              active:translate-y-1 active:border-b-0 active:shadow-none
+              hover:translate-y-px hover:border-b-px
+              active:translate-y-0.5 active:border-b-0 active:shadow-none
             "
           >
             Telegram botni ochish
           </a>
-          <p className="text-center text-sm font-semibold text-slate-500">Tasdiqlanishini kutmoqda...</p>
+          <p className="text-center text-sm font-semibold text-ink-soft">Tasdiqlanishini kutmoqda...</p>
         </>
       )}
     </div>
@@ -257,7 +257,7 @@ function OtpStep({ requestId, onSuccess, onRestart }) {
 
   return (
     <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-6 flex flex-col gap-4" noValidate>
-      <p className="text-base font-semibold text-slate-700">Telegram botga yuborilgan 6 xonali kodni kiriting.</p>
+      <p className="text-base font-semibold text-ink-soft">Telegram botga yuborilgan 6 xonali kodni kiriting.</p>
       <TextField
         label="Tasdiqlash kodi"
         placeholder="123456"
@@ -265,11 +265,11 @@ function OtpStep({ requestId, onSuccess, onRestart }) {
         error={errors.otp?.message}
         {...register('otp')}
       />
-      {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
       <SubmitButton disabled={isSubmitting || mutation.isPending}>
         {mutation.isPending ? 'Tekshirilmoqda...' : 'Tasdiqlash'}
       </SubmitButton>
-      <button type="button" onClick={onRestart} className="text-center text-base font-semibold text-slate-700">
+      <button type="button" onClick={onRestart} className="text-center text-base font-semibold text-ink-soft underline transition-colors hover:text-ink">
         Boshidan boshlash
       </button>
     </form>
@@ -300,11 +300,11 @@ function PasswordStep({ requestId, resetToken, onSuccess, onRestart }) {
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}
       />
-      {errors.root?.message && <p className="text-base font-semibold text-red-600">{errors.root.message}</p>}
+      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
       <SubmitButton disabled={isSubmitting || mutation.isPending}>
         {mutation.isPending ? 'Saqlanmoqda...' : 'Parolni yangilash'}
       </SubmitButton>
-      <button type="button" onClick={onRestart} className="text-center text-base font-semibold text-slate-700">
+      <button type="button" onClick={onRestart} className="text-center text-base font-semibold text-ink-soft underline transition-colors hover:text-ink">
         Boshidan boshlash
       </button>
     </form>

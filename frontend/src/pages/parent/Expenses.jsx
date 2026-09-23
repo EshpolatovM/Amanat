@@ -55,10 +55,10 @@ export default function Expenses() {
   if (children && children.length === 0) {
     return (
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Xarajatlar</h1>
-        <p className="mt-3 text-base font-semibold text-slate-700">
+        <h1 className="text-3xl font-serif font-semibold text-ink">Xarajatlar</h1>
+        <p className="mt-3 text-base font-semibold text-ink-soft">
           Hali farzand profili qo'shilmagan.{' '}
-          <Link to="/profile" className="text-green-600">
+          <Link to="/profile" className="text-forest underline transition-colors hover:text-forest">
             Profilga o'tib qo'shing
           </Link>
           .
@@ -72,15 +72,15 @@ export default function Expenses() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">Xarajatlar</h1>
+        <h1 className="text-3xl font-serif font-semibold text-ink">Xarajatlar</h1>
         <button
           type="button"
           onClick={() => setIsAdding((prev) => !prev)}
           className="
-            flex h-12 items-center gap-2 rounded-2xl border-b-4 border-green-800 bg-green-600 px-4
+            flex h-12 items-center gap-2 rounded-2xl border-b-2 border-forest-dark bg-forest px-4
             text-base font-bold text-white shadow-lg transition-all duration-100 ease-in-out
-            hover:translate-y-0.5 hover:border-b-[3px]
-            active:translate-y-1 active:border-b-0 active:shadow-none
+            hover:translate-y-px hover:border-b-px
+            active:translate-y-0.5 active:border-b-0 active:shadow-none
           "
         >
           <Plus className="h-5 w-5" strokeWidth={3} />
@@ -88,7 +88,7 @@ export default function Expenses() {
         </button>
       </div>
 
-      {children.length > 1 && (
+      {children?.length > 1 && (
         <div className="flex flex-wrap gap-2">
           {children.map((child) => (
             <button
@@ -97,8 +97,8 @@ export default function Expenses() {
               onClick={() => setChildId(child.id)}
               className={
                 effectiveChildId === child.id
-                  ? 'rounded-full bg-green-600 px-4 py-2 text-base font-bold text-white'
-                  : 'rounded-full border-2 border-slate-300 px-4 py-2 text-base font-semibold text-slate-700'
+                  ? 'rounded-full bg-forest px-4 py-2 text-base font-bold text-white transition-colors hover:bg-forest-dark'
+                  : 'rounded-full border-2 border-line px-4 py-2 text-base font-semibold text-ink-soft transition-colors hover:bg-paper'
               }
             >
               {child.firstName}
@@ -108,7 +108,7 @@ export default function Expenses() {
       )}
 
       {isAdding && effectiveChildId && (
-        <div className="rounded-2xl border-2 border-slate-300 bg-slate-50 p-4">
+        <div className="rounded-2xl border-2 border-line bg-paper p-4">
           <ExpenseTypeTabs value={addType} onChange={setAddType} />
           <div className="mt-4">
             <AddForm childId={effectiveChildId} onSuccess={() => setIsAdding(false)} />

@@ -7,26 +7,26 @@ const TABS = [
     to: '/child',
     label: 'Bosh sahifa',
     icon: Home,
-    activeBg: 'bg-green-50',
-    activeBorder: 'border-green-500',
+    activeBg: 'bg-forest-soft',
+    activeBorder: 'border-forest',
     exact: true,
   },
   {
     to: '/child/expenses',
     label: 'Xarajatlarim',
     icon: Wallet,
-    activeBg: 'bg-yellow-50',
-    activeBorder: 'border-yellow-500',
+    activeBg: 'bg-bronze-soft',
+    activeBorder: 'border-bronze',
   },
-  { to: '/child/profile', label: 'Men', icon: Smile, activeBg: 'bg-blue-50', activeBorder: 'border-blue-400' },
+  { to: '/child/profile', label: 'Men', icon: Smile, activeBg: 'bg-bronze-soft', activeBorder: 'border-bronze' },
 ]
 
 export default function SidebarChild() {
   const { pathname } = useLocation()
 
   return (
-    <aside className="fixed inset-y-4 left-4 z-40 hidden w-64 flex-col rounded-[2.5rem] border-4 border-green-200 bg-white px-4 py-8 shadow-lg lg:flex">
-      <span className="mb-8 px-2 text-xl font-bold text-slate-900">Amanat</span>
+    <aside className="fixed inset-y-4 left-4 z-40 hidden w-64 flex-col rounded-[2.5rem] border-4 border-bronze/30 bg-card px-4 py-8 shadow-lg lg:flex">
+      <span className="mb-8 px-2 text-xl font-serif font-semibold text-ink">Amanat</span>
 
       <nav className="flex flex-1 flex-col gap-3">
         {TABS.map(({ to, label, icon: Icon, activeBg, activeBorder, exact }) => {
@@ -36,16 +36,16 @@ export default function SidebarChild() {
               key={to}
               to={to}
               aria-current={active ? 'page' : undefined}
-              className="flex items-center gap-3 rounded-2xl px-2 py-2"
+              className="flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-paper"
             >
               <div
                 className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 transition-all duration-100 ${
-                  active ? `${activeBg} ${activeBorder}` : 'border-slate-300 bg-white'
+                  active ? `${activeBg} ${activeBorder}` : 'border-line bg-card'
                 }`}
               >
-                <Icon className="h-6 w-6 text-slate-900" strokeWidth={2.5} />
+                <Icon className="h-6 w-6 text-ink" strokeWidth={2.5} />
               </div>
-              <span className="text-sm font-bold text-slate-900">{label}</span>
+              <span className="text-sm font-bold text-ink">{label}</span>
             </Link>
           )
         })}

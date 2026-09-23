@@ -18,28 +18,28 @@ export default function UnplannedExpenseList({ items, childId, readOnly = false 
   })
 
   if (!items?.length) {
-    return <p className="text-base font-semibold text-slate-700">Hali kutilmagan xarajat kiritilmagan.</p>
+    return <p className="text-base font-semibold text-ink-soft">Hali kutilmagan xarajat kiritilmagan.</p>
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col divide-y divide-line overflow-hidden rounded-2xl border-2 border-line">
       {items.map((item) => (
         <div
           key={item.id}
-          className="flex items-center justify-between rounded-2xl border-2 border-red-500 bg-red-50 px-4 py-3"
+          className="flex items-center justify-between border-l-4 border-alert bg-paper px-4 py-3"
         >
           <div>
-            <p className="text-base font-bold text-red-700">{item.reason}</p>
-            <p className="text-sm font-semibold text-slate-700">{formatDayLabel(item.date)}</p>
+            <p className="text-base font-bold text-alert">{item.reason}</p>
+            <p className="text-sm font-semibold text-ink-soft">{formatDayLabel(item.date)}</p>
           </div>
           <div className="flex items-center gap-3">
-            <p className="text-lg font-bold text-slate-900">{formatMoney(item.amount)}</p>
+            <p className="text-lg font-bold text-ink">{formatMoney(item.amount)}</p>
             {!readOnly && (
               <button
                 type="button"
                 onClick={() => deleteMutation.mutate(item.id)}
                 aria-label="O'chirish"
-                className="text-slate-700"
+                className="text-ink-soft transition-colors hover:text-alert"
               >
                 <Trash2 className="h-5 w-5" />
               </button>

@@ -15,8 +15,8 @@ export default function ExpenseTypeTabs({ value, onChange }) {
             onClick={() => onChange(type)}
             className={
               active
-                ? `flex-1 rounded-2xl border-2 ${style.border} ${style.bg} px-3 py-3 text-sm font-bold ${style.text}`
-                : 'flex-1 rounded-2xl border-2 border-slate-300 px-3 py-3 text-sm font-bold text-slate-700'
+                ? `flex-1 rounded-2xl border-2 ${style.border} ${style.bg} px-3 py-3 text-sm font-bold ${style.text} transition-colors`
+                : 'flex-1 rounded-2xl border-2 border-line px-3 py-3 text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
             }
           >
             {style.label}

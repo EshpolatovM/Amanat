@@ -42,7 +42,7 @@ export default function ChildExpenses() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold text-slate-900">Xarajatlarim</h1>
+      <h1 className="text-3xl font-serif font-semibold text-ink">Xarajatlarim</h1>
 
       {/* Mobil/planshet (<lg): faqat tanlangan tur, tab orqali almashtiriladi */}
       <div className="flex flex-col gap-4 lg:hidden">

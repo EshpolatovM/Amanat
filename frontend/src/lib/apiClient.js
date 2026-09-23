@@ -5,8 +5,6 @@ export const apiClient = axios.create({
   withCredentials: true,
 })
 
-// login/register/refresh'ning o'zida 401 kelsa, bu haqiqiy autentifikatsiya
-// xatosi (noto'g'ri parol yoki yaroqsiz refresh token) — qayta urinish shart emas.
 const NO_RETRY_PATHS = ['/auth/refresh', '/auth/parent/login', '/auth/child/login', '/auth/parent/register']
 
 let refreshPromise = null

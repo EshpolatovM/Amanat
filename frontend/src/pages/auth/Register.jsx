@@ -41,10 +41,10 @@ export default function Register() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-sm rounded-3xl border-2 border-slate-300 bg-white p-8 shadow-lg">
-        <h1 className="text-center text-3xl font-bold text-slate-900">Amanat</h1>
-        <p className="mt-1 text-center text-base font-semibold text-slate-700">
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
+      <div className="w-full max-w-sm rounded-3xl border-2 border-line bg-card p-8 shadow-lg">
+        <h1 className="text-center text-3xl font-serif font-semibold text-ink">Amanat</h1>
+        <p className="mt-1 text-center text-base font-semibold text-ink-soft">
           Ota-ona sifatida ro'yxatdan o'ting
         </p>
 
@@ -65,16 +65,16 @@ export default function Register() {
             {...register('confirmPassword')}
           />
 
-          {formError && <p className="text-base font-semibold text-red-600">{formError}</p>}
+          {formError && <p className="text-base font-semibold text-alert">{formError}</p>}
 
           <button
             type="submit"
             disabled={isSubmitting}
             className="
-              mt-2 h-14 rounded-2xl border-b-4 border-green-800 bg-green-600 text-lg font-bold text-white
+              mt-2 h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
               shadow-lg transition-all duration-100 ease-in-out
-              hover:translate-y-0.5 hover:border-b-[3px]
-              active:translate-y-1 active:border-b-0 active:shadow-none
+              hover:translate-y-px hover:border-b-px
+              active:translate-y-0.5 active:border-b-0 active:shadow-none
               disabled:opacity-70
             "
           >
@@ -82,9 +82,9 @@ export default function Register() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-base font-semibold text-slate-700">
+        <p className="mt-6 text-center text-base font-semibold text-ink-soft">
           Hisobingiz bormi?{' '}
-          <Link to="/login" className="text-green-600">
+          <Link to="/login" className="text-forest underline transition-colors hover:text-forest">
             Kirish
           </Link>
         </p>

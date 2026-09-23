@@ -26,10 +26,10 @@ function TabLink({ to, label, icon: Icon, active, accent }) {
       aria-current={active ? 'page' : undefined}
     >
       <Icon
-        className={active ? `h-6 w-6 ${accent.text}` : 'h-6 w-6 text-slate-700'}
+        className={active ? `h-6 w-6 ${accent.text}` : 'h-6 w-6 text-ink-soft'}
         strokeWidth={active ? 2.5 : 2}
       />
-      <span className={active ? `text-xs font-semibold ${accent.text}` : 'text-xs font-semibold text-slate-700'}>
+      <span className={active ? `text-xs font-semibold ${accent.text}` : 'text-xs font-semibold text-ink-soft'}>
         {label}
       </span>
       <span className={active ? `h-0.5 w-4 rounded-full ${accent.indicator}` : 'h-0.5 w-4 rounded-full bg-transparent'} />
@@ -37,7 +37,7 @@ function TabLink({ to, label, icon: Icon, active, accent }) {
   )
 }
 
-// `status`: 'good' (byudjet normal, yashil) yoki 'over' (limitdan oshgan, qizil).
+// `status`: 'good' (byudjet normal, forest) yoki 'over' (limitdan oshgan, alert).
 // Backend'dan oylik xarajat holati kelganda shu prop orqali uzatiladi, hozircha default 'good'.
 export default function BottomTabBar({ status = 'good' }) {
   const { pathname } = useLocation()
@@ -47,7 +47,7 @@ export default function BottomTabBar({ status = 'good' }) {
   return (
     <>
       <nav
-        className="fixed inset-x-4 z-40 mx-auto flex h-20 max-w-md items-center justify-around rounded-full border-2 border-slate-300 bg-white px-3 shadow-lg lg:hidden"
+        className="fixed inset-x-4 z-40 mx-auto flex h-20 max-w-md items-center justify-around rounded-full border-2 border-line bg-card px-3 shadow-lg lg:hidden"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
       >
         {LEFT_TABS.map((tab) => (
@@ -60,10 +60,10 @@ export default function BottomTabBar({ status = 'good' }) {
           aria-label="Tezkor xarajat qo'shish"
           className={`
             -mt-8 flex h-16 w-16 shrink-0 items-center justify-center rounded-full
-            border-b-4 ${accent.plusBorder} ${accent.plusBg} text-white shadow-lg
+            border-b-2 ${accent.plusBorder} ${accent.plusBg} text-white shadow-lg
             transition-all duration-100 ease-in-out
-            hover:translate-y-0.5 hover:border-b-[3px]
-            active:translate-y-1 active:border-b-0 active:shadow-none
+            hover:translate-y-px hover:border-b-px
+            active:translate-y-0.5 active:border-b-0 active:shadow-none
           `}
         >
           <Plus className="h-8 w-8" strokeWidth={3} />

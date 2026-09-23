@@ -13,8 +13,8 @@ function App() {
 
   if (status === 'idle' || status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <p className="text-sm font-semibold text-slate-700">Yuklanmoqda...</p>
+      <div className="flex min-h-screen items-center justify-center bg-paper">
+        <p className="text-sm font-semibold text-ink-soft">Yuklanmoqda...</p>
       </div>
     )
   }
