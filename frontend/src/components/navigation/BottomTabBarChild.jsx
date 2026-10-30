@@ -26,6 +26,7 @@ export default function BottomTabBarChild() {
 
   return (
     <nav
+      aria-label="Asosiy menyu"
       className="fixed inset-x-4 z-40 mx-auto flex h-24 max-w-md items-center justify-around rounded-[2.5rem] border-4 border-bronze/30 bg-card px-4 shadow-lg lg:hidden"
       style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
     >
@@ -38,7 +39,7 @@ export default function BottomTabBarChild() {
                 active ? `${activeBg} ${activeBorder}` : 'border-line bg-card'
               }`}
             >
-              <Icon className="h-6 w-6 text-ink" strokeWidth={2.5} />
+              <Icon className="h-6 w-6 text-ink" strokeWidth={2.5} aria-hidden="true" />
             </div>
             <span className="text-xs font-bold text-ink">{label}</span>
           </Link>

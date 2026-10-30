@@ -2,33 +2,34 @@ import { formatMoney } from '../../lib/money'
 import { formatDayLabel } from '../../lib/date'
 import { EXPENSE_TYPE_STYLES } from './expenseTypeStyles'
 
-export default function RecentActivityList({ items, childNameById, showChildName = false }) {
-  if (!items?.length) {
-    return <p className="text-base font-semibold text-ink-soft">Bu oy hali xarajat kiritilmagan.</p>
-  }
+// So'nggi yozuvlar — nima uchun (maqsad/sabab), qachon, qancha. Avtomatik
+// qo'shilganlari alohida belgilanadi. amanat-design-system.md §4 (ledger istisnosi).
+export default function RecentActivityList({ items, childNameById, showChildName = false, emptyState, size = 'md' }) {
+  if (!items?.length) return emptyState ?? null
+  const large = size === 'lg'
 
   return (
-    <div className="flex flex-col divide-y divide-line overflow-hidden rounded-2xl border-2 border-line">
+    <ul className="flex flex-col divide-y-2 divide-line overflow-hidden rounded-2xl border-2 border-line">
       {items.map((item) => {
         const style = EXPENSE_TYPE_STYLES[item.type]
         const childName = showChildName ? childNameById?.[item.childId] : null
+        const meta = [formatDayLabel(item.date), childName, item.source === 'auto' ? 'avtomatik' : null]
+          .filter(Boolean)
+          .join(' · ')
 
         return (
-          <div
-            key={item.id}
-            className={`flex items-center justify-between border-l-4 ${style.border} bg-paper px-4 py-3`}
-          >
-            <div>
-              <p className={`text-base font-bold ${style.text}`}>
-                {style.label}
-                {childName ? ` — ${childName}` : ''}
-              </p>
-              <p className="text-sm font-semibold text-ink-soft">{formatDayLabel(item.date)}</p>
+          <li key={`${item.type}-${item.id}`} className={`border-l-4 ${style.border} bg-paper px-4 py-3`}>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className={`min-w-0 truncate font-bold ${style.text} ${large ? 'text-lg' : 'text-base'}`}>{item.label}</span>
+              <span className={`shrink-0 font-bold text-ink ${large ? 'text-xl' : 'text-lg'}`}>{formatMoney(item.amount)}</span>
             </div>
-            <p className="text-lg font-bold text-ink">{formatMoney(item.amount)}</p>
-          </div>
+            <p className="truncate text-sm font-semibold text-ink-soft">
+              {meta}
+              {item.comment ? ` · ${item.comment}` : ''}
+            </p>
+          </li>
         )
       })}
-    </div>
+    </ul>
   )
 }

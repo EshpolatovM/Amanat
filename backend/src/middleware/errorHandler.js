@@ -16,6 +16,20 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
+  // express.json() xatoliklari: buzilgan JSON yoki juda katta so'rov tanasi
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({
+      success: false,
+      error: { message: "So'rov tanasi (JSON) noto'g'ri formatda" },
+    });
+  }
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({
+      success: false,
+      error: { message: "So'rov hajmi juda katta" },
+    });
+  }
+
   if (err?.code === "P2002") {
     return res.status(409).json({
       success: false,
@@ -45,6 +59,14 @@ export function errorHandler(err, req, res, next) {
     return res.status(401).json({
       success: false,
       error: { message: "Token yaroqsiz yoki muddati tugagan" },
+    });
+  }
+
+  // body-parser / http-errors kabi kutubxonalarning mijoz xatoliklari (4xx)
+  if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 500) {
+    return res.status(err.status).json({
+      success: false,
+      error: { message: "So'rov noto'g'ri" },
     });
   }
 

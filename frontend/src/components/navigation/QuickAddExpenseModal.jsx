@@ -1,74 +1,77 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchChildren } from '../../api/children'
+import { childrenKeys, fetchChildren } from '../../api/children'
+import Modal from '../ui/Modal'
+import SelectField from '../forms/SelectField'
+import { EmptyState, ErrorState, LoadingState } from '../ui/States'
 import ExpenseTypeTabs from '../expenses/ExpenseTypeTabs'
 import PlannedExpenseForm from '../expenses/PlannedExpenseForm'
 import RecurringRuleForm from '../expenses/RecurringRuleForm'
 import UnplannedExpenseForm from '../expenses/UnplannedExpenseForm'
 
-export default function QuickAddExpenseModal({ open, onClose }) {
-  const { data: children } = useQuery({ queryKey: ['children'], queryFn: fetchChildren, enabled: open })
-  const [selectedChildId, setSelectedChildId] = useState(null)
-  const [type, setType] = useState('planned')
-  const childId = selectedChildId ?? children?.[0]?.id ?? null
+const FORMS = { planned: PlannedExpenseForm, recurring: RecurringRuleForm, unplanned: UnplannedExpenseForm }
 
-  if (!open) return null
+const TYPE_HINTS = {
+  planned: 'Maqsad uchun berilgan pul: kurs, telefon, kiyim va h.k.',
+  recurring: "Bir marta sozlang — tizim har kuni/oy o'zi qo'shib boradi.",
+  unplanned: "Rejada yo'q xarajat: ta'mirlash, jarima va h.k.",
+}
 
-  const hasChildren = (children?.length ?? 0) > 0
+// Har ochilishda yangidan mount qiling (`{open && <QuickAddExpenseModal .../>}`),
+// shunda boshlang'ich bola/tur har safar to'g'ri tanlanadi.
+export default function QuickAddExpenseModal({ onClose, initialChildId = null, initialType = 'planned' }) {
+  const childrenQuery = useQuery({ queryKey: childrenKeys.list, queryFn: fetchChildren })
+  const [selectedChildId, setSelectedChildId] = useState(initialChildId)
+  const [type, setType] = useState(initialType)
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 sm:items-center"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-3xl border-2 border-b-0 border-line bg-card p-6 sm:rounded-3xl sm:border-b-2"
-        onClick={(event) => event.stopPropagation()}
+  const children = childrenQuery.data ?? []
+  const childId = children.some((child) => child.id === selectedChildId) ? selectedChildId : (children[0]?.id ?? null)
+  const Form = FORMS[type]
+
+  let content
+  if (childrenQuery.isPending) {
+    content = <LoadingState />
+  } else if (childrenQuery.isError) {
+    content = <ErrorState error={childrenQuery.error} onRetry={() => childrenQuery.refetch()} />
+  } else if (children.length === 0) {
+    content = (
+      <EmptyState
+        action={
+          <Link to="/profile" onClick={onClose} className="text-base font-bold text-forest underline underline-offset-4">
+            Farzand profilini qo'shish
+          </Link>
+        }
       >
-        <div className="flex items-center justify-between border-b-2 border-line pb-4">
-          <h2 className="text-xl font-serif font-semibold text-ink">Xarajat qo'shish</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Yopish"
-            className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-line text-ink-soft transition-all duration-100 hover:bg-paper active:translate-y-0.5"
-          >
-            <X className="h-5 w-5" />
-          </button>
+        Xarajat yozish uchun avval farzandingiz profilini qo'shing.
+      </EmptyState>
+    )
+  } else {
+    content = (
+      <div className="flex flex-col gap-4">
+        {children.length > 1 && (
+          <SelectField label="Kim uchun" value={childId ?? ''} onChange={(event) => setSelectedChildId(event.target.value)}>
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.firstName} {child.lastName}
+              </option>
+            ))}
+          </SelectField>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <ExpenseTypeTabs value={type} onChange={setType} />
+          <p className="text-sm font-semibold text-ink-soft">{TYPE_HINTS[type]}</p>
         </div>
 
-        {!hasChildren ? (
-          <p className="py-8 text-center text-base font-semibold text-ink-soft">
-            Avval Profil bo'limidan bola profili qo'shing.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-4 pt-4">
-            {children.length > 1 && (
-              <label className="flex flex-col gap-1.5">
-                <span className="text-base font-semibold text-ink">Bola</span>
-                <select
-                  value={childId ?? ''}
-                  onChange={(event) => setSelectedChildId(event.target.value)}
-                  className="h-14 rounded-2xl border-2 border-line bg-card px-4 text-lg text-ink outline-none focus:border-forest"
-                >
-                  {children.map((child) => (
-                    <option key={child.id} value={child.id}>
-                      {child.firstName} {child.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <ExpenseTypeTabs value={type} onChange={setType} />
-
-            {type === 'planned' && <PlannedExpenseForm childId={childId} onSuccess={onClose} />}
-            {type === 'recurring' && <RecurringRuleForm childId={childId} onSuccess={onClose} />}
-            {type === 'unplanned' && <UnplannedExpenseForm childId={childId} onSuccess={onClose} />}
-          </div>
-        )}
+        <Form key={`${type}-${childId}`} childId={childId} onSuccess={onClose} />
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Xarajat qo'shish">
+      {content}
+    </Modal>
   )
 }

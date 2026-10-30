@@ -35,6 +35,7 @@ export const goalsRouter = Router();
  *               name: { type: string, example: "Kurs puli" }
  *     responses:
  *       201: { description: Maqsad yaratildi }
+ *       409: { description: Bu nomdagi maqsad allaqachon mavjud }
  */
 goalsRouter.post(
   "/children/:childId/goals",
@@ -58,7 +59,7 @@ goalsRouter.post(
  *         required: true
  *         schema: { type: string }
  *     responses:
- *       200: { description: Maqsadlar ro'yxati }
+ *       200: { description: Maqsadlar ro'yxati (har birida usageCount — bog'langan yozuvlar soni) }
  */
 goalsRouter.get(
   "/children/:childId/goals",
@@ -90,6 +91,7 @@ goalsRouter.get(
  *               name: { type: string }
  *     responses:
  *       200: { description: Yangilandi }
+ *       409: { description: Bu nomdagi maqsad allaqachon mavjud }
  */
 goalsRouter.patch(
   "/goals/:id",

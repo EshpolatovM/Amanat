@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as controller from "./passwordReset.controller.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { validateBody, validateParams } from "../../middleware/validate.js";
+import { rateLimit } from "../../middleware/rateLimit.js";
 import {
   startResetSchema,
   requestIdParamsSchema,
@@ -10,6 +11,13 @@ import {
 } from "./passwordReset.schema.js";
 
 export const passwordResetRouter = Router();
+
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
+// TZ 6.1: telefon bo'yicha chastota servisda (1 so'rov/daqiqa), IP bo'yicha esa shu yerda cheklanadi.
+const startLimiter = rateLimit({ windowMs: FIFTEEN_MINUTES, max: 5 });
+const verifyLimiter = rateLimit({ windowMs: FIFTEEN_MINUTES, max: 30 });
+const confirmLimiter = rateLimit({ windowMs: FIFTEEN_MINUTES, max: 10 });
 
 /**
  * @openapi
@@ -29,8 +37,9 @@ export const passwordResetRouter = Router();
  *     responses:
  *       201: { description: So'rov yaratildi, Telegram bot havolasi qaytariladi }
  *       429: { description: Juda ko'p so'rov yuborildi }
+ *       503: { description: Telegram bot sozlanmagan }
  */
-passwordResetRouter.post("/start", validateBody(startResetSchema), asyncHandler(controller.startReset));
+passwordResetRouter.post("/start", startLimiter, validateBody(startResetSchema), asyncHandler(controller.startReset));
 
 /**
  * @openapi
@@ -77,10 +86,12 @@ passwordResetRouter.get(
  *     responses:
  *       200: { description: Kod to'g'ri, vaqtinchalik reset-token qaytariladi }
  *       400: { description: Kod noto'g'ri yoki muddati tugagan }
+ *       410: { description: So'rov muddati tugagan yoki allaqachon ishlatilgan }
  *       429: { description: Urinishlar soni tugadi }
  */
 passwordResetRouter.post(
   "/:requestId/verify",
+  verifyLimiter,
   validateParams(requestIdParamsSchema),
   validateBody(verifyOtpSchema),
   asyncHandler(controller.verifyResetOtp),
@@ -106,5 +117,11 @@ passwordResetRouter.post(
  *     responses:
  *       200: { description: Parol muvaffaqiyatli yangilandi }
  *       400: { description: Token noto'g'ri yoki muddati tugagan }
+ *       410: { description: So'rov allaqachon ishlatilgan }
  */
-passwordResetRouter.post("/confirm", validateBody(confirmResetSchema), asyncHandler(controller.confirmReset));
+passwordResetRouter.post(
+  "/confirm",
+  confirmLimiter,
+  validateBody(confirmResetSchema),
+  asyncHandler(controller.confirmReset),
+);

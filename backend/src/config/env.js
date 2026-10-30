@@ -13,6 +13,13 @@ class AppConfig {
     };
     this.cookieSecure = process.env.COOKIE_SECURE === "true";
     this.corsOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
+    // Reverse-proxy (nginx va h.k.) ortida ishlaganda rate-limit haqiqiy
+    // mijoz IP'sini ko'rishi uchun (Express `trust proxy` sozlamasi).
+    this.trustProxy = process.env.TRUST_PROXY === "true";
+    // "Bugun", joriy hafta/oy va kundalik xarajat generatsiyasi shu vaqt
+    // mintaqasidagi kalendar kuni bo'yicha hisoblanadi — server qaysi
+    // mintaqada ishlashidan qat'i nazar (auditoriya O'zbekistonda, UTC+5).
+    this.appTimezone = this.#timezone(process.env.APP_TIMEZONE || "Asia/Tashkent");
     this.telegram = {
       botToken: process.env.TELEGRAM_BOT_TOKEN || "",
       botUsername: process.env.TELEGRAM_BOT_USERNAME || "",
@@ -31,6 +38,15 @@ class AppConfig {
     const value = process.env[name];
     if (!value) {
       throw new Error(`Muhit o'zgaruvchisi topilmadi: ${name}`);
+    }
+    return value;
+  }
+
+  #timezone(value) {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: value });
+    } catch {
+      throw new Error(`APP_TIMEZONE noto'g'ri: ${value} (masalan "Asia/Tashkent" bo'lishi kerak)`);
     }
     return value;
   }

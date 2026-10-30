@@ -1,19 +1,20 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { nameSchema, newPasswordSchema, phoneSchema } from '../../lib/validation'
 import TextField from '../../components/forms/TextField'
+import Button from '../../components/ui/Button'
+import AuthCard from '../../components/auth/AuthCard'
 
 const registerSchema = z
   .object({
-    firstName: z.string().trim().min(1, 'Ism kiritilishi shart'),
-    lastName: z.string().trim().min(1, 'Familiya kiritilishi shart'),
-    phone: z
-      .string()
-      .trim()
-      .regex(/^\+?\d{9,15}$/, "Telefon raqami noto'g'ri formatda"),
-    password: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
+    firstName: nameSchema('Ism'),
+    lastName: nameSchema('Familiya'),
+    phone: phoneSchema,
+    password: newPasswordSchema(),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -22,10 +23,8 @@ const registerSchema = z
   })
 
 export default function Register() {
-  const navigate = useNavigate()
   const registerParent = useAuthStore((state) => state.registerParent)
-  const formError = useAuthStore((state) => state.error)
-  const clearError = useAuthStore((state) => state.clearError)
+  const [formError, setFormError] = useState(null)
 
   const {
     register,
@@ -33,62 +32,65 @@ export default function Register() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(registerSchema) })
 
+  // Muvaffaqiyatli ro'yxatdan o'tilgach yo'naltirishni <GuestOnly> bajaradi.
   async function onSubmit(values) {
-    clearError()
+    setFormError(null)
     const { confirmPassword: _confirmPassword, ...payload } = values
-    const success = await registerParent(payload)
-    if (success) navigate('/', { replace: true })
+    const result = await registerParent(payload)
+    if (!result.ok) setFormError(result.error)
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
-      <div className="w-full max-w-sm rounded-3xl border-2 border-line bg-card p-8 shadow-lg">
-        <h1 className="text-center text-3xl font-serif font-semibold text-ink">Amanat</h1>
-        <p className="mt-1 text-center text-base font-semibold text-ink-soft">
-          Ota-ona sifatida ro'yxatdan o'ting
-        </p>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
-          <TextField label="Ism" error={errors.firstName?.message} {...register('firstName')} />
-          <TextField label="Familiya" error={errors.lastName?.message} {...register('lastName')} />
-          <TextField
-            label="Telefon raqami"
-            placeholder="+998901234567"
-            error={errors.phone?.message}
-            {...register('phone')}
-          />
-          <TextField label="Parol" type="password" error={errors.password?.message} {...register('password')} />
-          <TextField
-            label="Parolni tasdiqlang"
-            type="password"
-            error={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-          />
-
-          {formError && <p className="text-base font-semibold text-alert">{formError}</p>}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="
-              mt-2 h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
-              shadow-lg transition-all duration-100 ease-in-out
-              hover:translate-y-px hover:border-b-px
-              active:translate-y-0.5 active:border-b-0 active:shadow-none
-              disabled:opacity-70
-            "
-          >
-            {isSubmitting ? 'Kuting...' : "Ro'yxatdan o'tish"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-base font-semibold text-ink-soft">
+    <AuthCard
+      subtitle="Ota-ona sifatida ro'yxatdan o'ting"
+      footer={
+        <>
           Hisobingiz bormi?{' '}
-          <Link to="/login" className="text-forest underline transition-colors hover:text-forest">
+          <Link to="/login" className="font-bold text-forest underline underline-offset-4">
             Kirish
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-4" noValidate>
+        <TextField label="Ism" autoComplete="given-name" maxLength={50} error={errors.firstName?.message} {...register('firstName')} />
+        <TextField label="Familiya" autoComplete="family-name" maxLength={50} error={errors.lastName?.message} {...register('lastName')} />
+        <TextField
+          label="Telefon raqami"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="+998 90 123 45 67"
+          hint="Parolni unutsangiz, shu raqamga bog'langan Telegram orqali tiklaysiz."
+          error={errors.phone?.message}
+          {...register('phone')}
+        />
+        <TextField
+          label="Parol"
+          type="password"
+          autoComplete="new-password"
+          hint="Kamida 6 ta belgi"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <TextField
+          label="Parolni takrorlang"
+          type="password"
+          autoComplete="new-password"
+          error={errors.confirmPassword?.message}
+          {...register('confirmPassword')}
+        />
+
+        {formError && (
+          <p role="alert" className="rounded-2xl border-2 border-alert bg-alert-soft p-3 text-base font-semibold text-alert">
+            {formError}
+          </p>
+        )}
+
+        <Button type="submit" loading={isSubmitting} fullWidth className="mt-2">
+          Ro'yxatdan o'tish
+        </Button>
+      </form>
+    </AuthCard>
   )
 }

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { phoneSchema } from "../../utils/phone.js";
-
-const passwordSchema = z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+import { passwordSchema } from "../../utils/schemas.js";
 
 export const requestIdParamsSchema = z.object({
   requestId: z.string().uuid("So'rov identifikatori noto'g'ri"),
@@ -20,6 +19,6 @@ export const verifyOtpSchema = z.object({
 
 export const confirmResetSchema = z.object({
   requestId: z.string().uuid("So'rov identifikatori noto'g'ri"),
-  resetToken: z.string().trim().min(1, "Token kiritilishi shart"),
-  newPassword: passwordSchema,
+  resetToken: z.string().trim().min(1, "Token kiritilishi shart").max(200, "Token noto'g'ri"),
+  newPassword: passwordSchema(),
 });

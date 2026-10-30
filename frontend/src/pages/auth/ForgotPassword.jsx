@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { Send } from 'lucide-react'
 import {
   startPasswordReset,
   fetchPasswordResetStatus,
@@ -12,25 +13,25 @@ import {
   passwordResetKeys,
 } from '../../api/passwordReset'
 import { extractErrorMessage } from '../../lib/apiClient'
+import { newPasswordSchema, phoneSchema } from '../../lib/validation'
+import { formatPhone } from '../../lib/phone'
 import TextField from '../../components/forms/TextField'
+import Button from '../../components/ui/Button'
+import { buttonClassName } from '../../components/ui/buttonStyles'
+import AuthCard from '../../components/auth/AuthCard'
 
-const phoneSchema = z.object({
-  phone: z
-    .string()
-    .trim()
-    .regex(/^\+?\d{9,15}$/, "Telefon raqami noto'g'ri formatda"),
-})
+const phoneFormSchema = z.object({ phone: phoneSchema })
 
 const otpSchema = z.object({
   otp: z
     .string()
-    .trim()
-    .regex(/^\d{6}$/, "Kod 6 xonali raqamdan iborat bo'lishi kerak"),
+    .transform((value) => value.replace(/\s/g, ''))
+    .pipe(z.string().regex(/^\d{6}$/, 'Kod 6 xonali raqamdan iborat bo\'lishi kerak')),
 })
 
 const passwordSchema = z
   .object({
-    newPassword: z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak"),
+    newPassword: newPasswordSchema(),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -38,68 +39,68 @@ const passwordSchema = z
     path: ['confirmPassword'],
   })
 
-function Card({ children }) {
+const STEPS = ['phone', 'telegram', 'otp', 'password']
+
+function StepIndicator({ step }) {
+  const index = STEPS.indexOf(step)
+  if (index < 0) return null
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
-      <div className="w-full max-w-sm rounded-3xl border-2 border-line bg-card p-8 shadow-lg">{children}</div>
-    </div>
+    <p className="mt-4 text-center text-sm font-bold text-ink-soft" aria-live="polite">
+      {index + 1}-qadam / {STEPS.length}
+    </p>
   )
 }
 
-function SubmitButton({ children, disabled }) {
+function FormError({ message }) {
+  if (!message) return null
   return (
-    <button
-      type="submit"
-      disabled={disabled}
-      className="
-        mt-2 h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
-        shadow-lg transition-all duration-100 ease-in-out
-        hover:translate-y-px hover:border-b-px
-        active:translate-y-0.5 active:border-b-0 active:shadow-none
-        disabled:opacity-70
-      "
-    >
-      {children}
-    </button>
+    <p role="alert" className="rounded-2xl border-2 border-alert bg-alert-soft p-3 text-base font-semibold text-alert">
+      {message}
+    </p>
   )
 }
 
 export default function ForgotPassword() {
   const navigate = useNavigate()
   const [step, setStep] = useState('phone')
-  const [requestId, setRequestId] = useState(null)
-  const [botDeepLink, setBotDeepLink] = useState(null)
+  const [request, setRequest] = useState(null) // { requestId, botDeepLink, phone }
   const [resetToken, setResetToken] = useState(null)
 
   function restart() {
     setStep('phone')
-    setRequestId(null)
-    setBotDeepLink(null)
+    setRequest(null)
     setResetToken(null)
   }
 
   return (
-    <Card>
-      <h1 className="text-center text-3xl font-serif font-semibold text-ink">Amanat</h1>
-      <p className="mt-1 text-center text-base font-semibold text-ink-soft">Parolni tiklash</p>
+    <AuthCard
+      subtitle="Parolni tiklash"
+      footer={
+        step !== 'done' && (
+          <Link to="/login" className="font-bold text-forest underline underline-offset-4">
+            Kirish sahifasiga qaytish
+          </Link>
+        )
+      }
+    >
+      <StepIndicator step={step} />
 
       {step === 'phone' && (
         <PhoneStep
-          onSuccess={(data) => {
-            setRequestId(data.requestId)
-            setBotDeepLink(data.botDeepLink)
+          onSuccess={(data, phone) => {
+            setRequest({ ...data, phone })
             setStep('telegram')
           }}
         />
       )}
 
       {step === 'telegram' && (
-        <TelegramStep requestId={requestId} botDeepLink={botDeepLink} onVerified={() => setStep('otp')} onRestart={restart} />
+        <TelegramStep request={request} onVerified={() => setStep('otp')} onRestart={restart} />
       )}
 
       {step === 'otp' && (
         <OtpStep
-          requestId={requestId}
+          requestId={request.requestId}
           onSuccess={(data) => {
             setResetToken(data.resetToken)
             setStep('password')
@@ -110,7 +111,7 @@ export default function ForgotPassword() {
 
       {step === 'password' && (
         <PasswordStep
-          requestId={requestId}
+          requestId={request.requestId}
           resetToken={resetToken}
           onSuccess={() => setStep('done')}
           onRestart={restart}
@@ -119,32 +120,15 @@ export default function ForgotPassword() {
 
       {step === 'done' && (
         <div className="mt-6 flex flex-col gap-4">
-          <p className="text-center text-base font-semibold text-ink-soft underline transition-colors hover:text-ink">
-            Parolingiz muvaffaqiyatli yangilandi. Endi yangi parol bilan tizimga kirishingiz mumkin.
+          <p className="rounded-2xl border-2 border-forest bg-forest-soft p-4 text-base font-semibold text-forest-dark">
+            Parolingiz yangilandi. Xavfsizlik uchun barcha qurilmalardan chiqarildingiz — endi yangi parol bilan kiring.
           </p>
-          <button
-            type="button"
-            onClick={() => navigate('/login', { replace: true })}
-            className="
-              h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
-              shadow-lg transition-all duration-100 ease-in-out
-              hover:translate-y-px hover:border-b-px
-              active:translate-y-0.5 active:border-b-0 active:shadow-none
-            "
-          >
+          <Button onClick={() => navigate('/login', { replace: true })} fullWidth>
             Kirish sahifasiga o'tish
-          </button>
+          </Button>
         </div>
       )}
-
-      {step !== 'done' && (
-        <p className="mt-6 text-center text-base font-semibold text-ink-soft">
-          <Link to="/login" className="text-forest underline transition-colors hover:text-forest">
-            Kirish sahifasiga qaytish
-          </Link>
-        </p>
-      )}
-    </Card>
+    </AuthCard>
   )
 }
 
@@ -152,91 +136,90 @@ function PhoneStep({ onSuccess }) {
   const {
     register,
     handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(phoneSchema) })
+    formState: { errors },
+  } = useForm({ resolver: zodResolver(phoneFormSchema) })
 
   const mutation = useMutation({
     mutationFn: (values) => startPasswordReset(values.phone),
-    onSuccess,
-    onError: (error) => setError('root', { message: extractErrorMessage(error) }),
+    onSuccess: (data, values) => onSuccess(data, values.phone),
   })
 
   return (
-    <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-6 flex flex-col gap-4" noValidate>
+    <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-4 flex flex-col gap-4" noValidate>
       <p className="text-base font-semibold text-ink-soft">
-        Ro'yxatdan o'tgan telefon raqamingizni kiriting. Parolni tiklash uchun Telegram bot orqali tasdiqlaysiz.
+        Ro'yxatdan o'tgan telefon raqamingizni kiriting. Keyin shu raqam ulangan Telegram orqali tasdiqlaysiz.
       </p>
       <TextField
         label="Telefon raqami"
-        placeholder="+998901234567"
+        type="tel"
+        inputMode="tel"
+        autoComplete="tel"
+        placeholder="+998 90 123 45 67"
         error={errors.phone?.message}
         {...register('phone')}
       />
-      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
-      <SubmitButton disabled={isSubmitting || mutation.isPending}>
-        {mutation.isPending ? 'Kuting...' : 'Davom etish'}
-      </SubmitButton>
+      <FormError message={mutation.isError ? extractErrorMessage(mutation.error) : null} />
+      <Button type="submit" loading={mutation.isPending} fullWidth>
+        Davom etish
+      </Button>
     </form>
   )
 }
 
-function TelegramStep({ requestId, botDeepLink, onVerified, onRestart }) {
+const isTerminalError = (error) => [404, 410].includes(error?.response?.status)
+
+function TelegramStep({ request, onVerified, onRestart }) {
   const statusQuery = useQuery({
-    queryKey: passwordResetKeys.status(requestId),
-    queryFn: () => fetchPasswordResetStatus(requestId),
-    enabled: !!requestId,
-    refetchInterval: 2000,
+    queryKey: passwordResetKeys.status(request.requestId),
+    queryFn: () => fetchPasswordResetStatus(request.requestId),
+    // Tarmoq uzilsa ham kutishda davom etamiz; faqat so'rov topilmasa/muddati o'tsa to'xtaymiz.
+    refetchInterval: (query) => (isTerminalError(query.state.error) ? false : 2000),
+    refetchIntervalInBackground: true,
     retry: false,
+    staleTime: 0,
   })
 
+  const status = statusQuery.data?.status
   useEffect(() => {
-    if (statusQuery.data?.status === 'otp_sent') onVerified()
-  }, [statusQuery.data, onVerified])
+    if (status === 'otp_sent') onVerified()
+  }, [status, onVerified])
 
-  const expired = statusQuery.isError
+  const expired = isTerminalError(statusQuery.error)
+
+  if (expired) {
+    return (
+      <div className="mt-4 flex flex-col gap-4">
+        <FormError message="So'rov muddati tugadi (15 daqiqa). Qaytadan boshlang." />
+        <Button variant="secondary" onClick={onRestart} fullWidth>
+          Qaytadan boshlash
+        </Button>
+      </div>
+    )
+  }
 
   return (
-    <div className="mt-6 flex flex-col gap-4">
+    <div className="mt-4 flex flex-col gap-4">
       <p className="text-base font-semibold text-ink-soft">
-        1. Quyidagi tugma orqali Telegram botni oching va <strong>Start</strong> bosing.
-        <br />
-        2. Bot so'ragan tugma orqali telefon raqamingizni ulashing.
-        <br />
-        3. Bu sahifa o'zi davom etadi.
+        <strong className="text-ink">{formatPhone(request.phone)}</strong> raqamini tasdiqlash uchun:
+      </p>
+      <ol className="flex list-decimal flex-col gap-2 pl-6 text-base font-semibold text-ink">
+        <li>Quyidagi tugma orqali Telegram botni oching va «Start»ni bosing.</li>
+        <li>Botdagi «📱 Telefon raqamni ulashish» tugmasini bosing.</li>
+        <li>Bot kod yuboradi — bu sahifa o'zi keyingi qadamga o'tadi.</li>
+      </ol>
+
+      <a href={request.botDeepLink} target="_blank" rel="noreferrer" className={buttonClassName({ fullWidth: true })}>
+        <Send className="h-5 w-5" aria-hidden="true" />
+        Telegram botni ochish
+      </a>
+
+      <p role="status" className="text-center text-sm font-semibold text-ink-soft">
+        {statusQuery.isError ? 'Aloqa uzildi — qayta ulanmoqda…' : 'Telegram orqali tasdiqlanishi kutilmoqda…'}
       </p>
 
-      {expired ? (
-        <>
-          <p className="text-base font-semibold text-alert">
-            So'rov muddati tugagan yoki topilmadi. Qaytadan boshlang.
-          </p>
-          <button
-            type="button"
-            onClick={onRestart}
-            className="h-14 rounded-2xl border-2 border-line text-lg font-bold text-ink transition-colors hover:bg-paper"
-          >
-            Qaytadan boshlash
-          </button>
-        </>
-      ) : (
-        <>
-          <a
-            href={botDeepLink}
-            target="_blank"
-            rel="noreferrer"
-            className="
-              flex h-14 items-center justify-center rounded-2xl border-b-2 border-forest-dark bg-forest
-              text-lg font-bold text-white shadow-lg transition-all duration-100 ease-in-out
-              hover:translate-y-px hover:border-b-px
-              active:translate-y-0.5 active:border-b-0 active:shadow-none
-            "
-          >
-            Telegram botni ochish
-          </a>
-          <p className="text-center text-sm font-semibold text-ink-soft">Tasdiqlanishini kutmoqda...</p>
-        </>
-      )}
+      <Button variant="ghost" size="md" onClick={onRestart}>
+        Boshqa raqam kiritish
+      </Button>
     </div>
   )
 }
@@ -245,33 +228,43 @@ function OtpStep({ requestId, onSuccess, onRestart }) {
   const {
     register,
     handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm({ resolver: zodResolver(otpSchema) })
 
   const mutation = useMutation({
     mutationFn: (values) => verifyPasswordResetOtp(requestId, values.otp),
     onSuccess,
-    onError: (error) => setError('root', { message: extractErrorMessage(error) }),
   })
+  const locked = [410, 429].includes(mutation.error?.response?.status)
 
   return (
-    <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-6 flex flex-col gap-4" noValidate>
+    <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-4 flex flex-col gap-4" noValidate>
       <p className="text-base font-semibold text-ink-soft">Telegram botga yuborilgan 6 xonali kodni kiriting.</p>
       <TextField
         label="Tasdiqlash kodi"
-        placeholder="123456"
         inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={7}
+        placeholder="123456"
+        className="text-center font-mono font-bold tracking-[0.4em]"
         error={errors.otp?.message}
         {...register('otp')}
       />
-      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
-      <SubmitButton disabled={isSubmitting || mutation.isPending}>
-        {mutation.isPending ? 'Tekshirilmoqda...' : 'Tasdiqlash'}
-      </SubmitButton>
-      <button type="button" onClick={onRestart} className="text-center text-base font-semibold text-ink-soft underline transition-colors hover:text-ink">
-        Boshidan boshlash
-      </button>
+      <FormError message={mutation.isError ? extractErrorMessage(mutation.error) : null} />
+      {locked ? (
+        <Button onClick={onRestart} fullWidth>
+          Qaytadan boshlash
+        </Button>
+      ) : (
+        <Button type="submit" loading={mutation.isPending} fullWidth>
+          Tasdiqlash
+        </Button>
+      )}
+      {!locked && (
+        <Button variant="ghost" size="md" onClick={onRestart}>
+          Boshidan boshlash
+        </Button>
+      )}
     </form>
   )
 }
@@ -280,33 +273,39 @@ function PasswordStep({ requestId, resetToken, onSuccess, onRestart }) {
   const {
     register,
     handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm({ resolver: zodResolver(passwordSchema) })
 
   const mutation = useMutation({
-    mutationFn: (values) =>
-      confirmPasswordReset({ requestId, resetToken, newPassword: values.newPassword }),
+    mutationFn: (values) => confirmPasswordReset({ requestId, resetToken, newPassword: values.newPassword }),
     onSuccess,
-    onError: (error) => setError('root', { message: extractErrorMessage(error) }),
   })
 
   return (
-    <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-6 flex flex-col gap-4" noValidate>
-      <TextField label="Yangi parol" type="password" error={errors.newPassword?.message} {...register('newPassword')} />
+    <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="mt-4 flex flex-col gap-4" noValidate>
+      <p className="text-base font-semibold text-ink-soft">Raqamingiz tasdiqlandi. Yangi parol o'ylab toping.</p>
       <TextField
-        label="Yangi parolni tasdiqlang"
+        label="Yangi parol"
         type="password"
+        autoComplete="new-password"
+        hint="Kamida 6 ta belgi"
+        error={errors.newPassword?.message}
+        {...register('newPassword')}
+      />
+      <TextField
+        label="Yangi parolni takrorlang"
+        type="password"
+        autoComplete="new-password"
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}
       />
-      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
-      <SubmitButton disabled={isSubmitting || mutation.isPending}>
-        {mutation.isPending ? 'Saqlanmoqda...' : 'Parolni yangilash'}
-      </SubmitButton>
-      <button type="button" onClick={onRestart} className="text-center text-base font-semibold text-ink-soft underline transition-colors hover:text-ink">
+      <FormError message={mutation.isError ? extractErrorMessage(mutation.error) : null} />
+      <Button type="submit" loading={mutation.isPending} fullWidth>
+        Parolni yangilash
+      </Button>
+      <Button variant="ghost" size="md" onClick={onRestart}>
         Boshidan boshlash
-      </button>
+      </Button>
     </form>
   )
 }

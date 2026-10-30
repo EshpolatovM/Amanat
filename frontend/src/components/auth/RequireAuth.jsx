@@ -1,5 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { homePathFor } from '../../lib/authRoutes'
+import FullPageLoader from '../ui/FullPageLoader'
 
 export default function RequireAuth({ role, children }) {
   const status = useAuthStore((state) => state.status)
@@ -7,11 +9,7 @@ export default function RequireAuth({ role, children }) {
   const location = useLocation()
 
   if (status === 'idle' || status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-paper">
-        <p className="text-sm font-semibold text-ink-soft">Yuklanmoqda...</p>
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   if (status === 'unauthenticated' || !user) {
@@ -19,7 +17,7 @@ export default function RequireAuth({ role, children }) {
   }
 
   if (user.role !== role) {
-    return <Navigate to={user.role === 'parent' ? '/' : '/child'} replace />
+    return <Navigate to={homePathFor(user.role)} replace />
   }
 
   return children

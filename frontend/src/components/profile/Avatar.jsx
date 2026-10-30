@@ -1,9 +1,15 @@
-export default function Avatar({ firstName, lastName, className = '' }) {
-  const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase()
+const SIZES = {
+  sm: 'h-11 w-11 text-base',
+  md: 'h-16 w-16 text-xl',
+}
+
+export default function Avatar({ firstName, lastName, size = 'md', className = '' }) {
+  const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toLocaleUpperCase('uz')
 
   return (
     <div
-      className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-xl font-bold ${className}`}
+      aria-hidden="true"
+      className={`flex shrink-0 items-center justify-center rounded-full font-bold ${SIZES[size]} ${className}`}
     >
       {initials}
     </div>

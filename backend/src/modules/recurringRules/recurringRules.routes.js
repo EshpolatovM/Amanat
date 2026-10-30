@@ -93,6 +93,12 @@ recurringRulesRouter.get(
  *   patch:
  *     tags: [RecurringRules]
  *     summary: Qoidani tahrirlash yoki to'xtatish/faollashtirish (faqat ota-ona)
+ *     description: >
+ *       O'zgarishlar faqat kelajakka ta'sir qiladi — allaqachon yaratilgan
+ *       yozuvlar qayta yozilmaydi. To'xtatilgan qoida qayta yoqilganda oradagi
+ *       kunlar uchun yozuv yaratilmaydi. Sana oralig'i qisqartirilsa, oraliqdan
+ *       tashqaridagi avtomatik yozuvlar o'chiriladi; boshlanish sanasi ertaroqqa
+ *       surilsa, qo'shilgan davr to'ldiriladi.
  *     security: [{ cookieAuth: [] }]
  *     parameters:
  *       - in: path

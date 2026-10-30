@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { phoneSchema } from "../../utils/phone.js";
-
-const passwordSchema = z.string().min(6, "Parol kamida 6 ta belgidan iborat bo'lishi kerak");
+import { nameSchema, passwordSchema } from "../../utils/schemas.js";
 
 // login/logout uchun oddiy format tekshiruvi — normalizatsiya qilinmaydi,
 // chunki bu sxema bola login qilishida ham ishlatiladi va bolaning `phone`
@@ -13,13 +12,13 @@ const loginPhoneSchema = z
   .regex(/^\+?\d{9,15}$/, "Telefon raqami noto'g'ri formatda");
 
 export const parentRegisterSchema = z.object({
-  firstName: z.string().trim().min(1, "Ism kiritilishi shart"),
-  lastName: z.string().trim().min(1, "Familiya kiritilishi shart"),
+  firstName: nameSchema("Ism"),
+  lastName: nameSchema("Familiya"),
   phone: phoneSchema,
-  password: passwordSchema,
+  password: passwordSchema(),
 });
 
 export const loginSchema = z.object({
   phone: loginPhoneSchema,
-  password: z.string().min(1, "Parol kiritilishi shart"),
+  password: z.string().min(1, "Parol kiritilishi shart").max(200, "Parol juda uzun"),
 });

@@ -11,6 +11,10 @@ export async function updateChild(childId, payload) {
   return data.data
 }
 
+export async function deleteChild(childId) {
+  await apiClient.delete(`/children/${childId}`)
+}
+
 // Bola paroli hech qachon qayta o'qib bo'lmaydi (backend faqat hash saqlaydi),
 // shuning uchun "yo'qolgan parol" muammosi eskisini ko'rsatish bilan emas,
 // yangi 6 xonali parol generatsiya qilib qo'yish bilan hal qilinadi.
@@ -50,4 +54,8 @@ export async function createChildWithGeneratedCredentials(basePayload) {
     }
   }
   throw lastError
+}
+
+export const childrenKeys = {
+  list: ['children'],
 }

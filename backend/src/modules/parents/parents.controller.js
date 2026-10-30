@@ -10,5 +10,5 @@ export async function updateMe(req, res) {
 }
 
 export async function changePassword(req, res) {
-  ok(res, await parentsService.changePassword(req.user.id, req.body));
+  ok(res, await parentsService.changePassword(req.user.id, req.body, req.cookies?.refreshToken));
 }

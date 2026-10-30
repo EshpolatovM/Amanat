@@ -3,9 +3,33 @@ import * as controller from "./auth.controller.js";
 import { asyncHandler } from "../../middleware/asyncHandler.js";
 import { validateBody } from "../../middleware/validate.js";
 import { authenticate } from "../../middleware/auth.js";
+import { rateLimit, loginIdentifierKey } from "../../middleware/rateLimit.js";
 import { parentRegisterSchema, loginSchema } from "./auth.schema.js";
 
 export const authRouter = Router();
+
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
+// Parolni taxmin qilib topishdan (brute-force) himoya — uch qatlam:
+// bitta IP'dan umumiy, bitta IP'dan bitta akkauntga va (turli IP'lardan) bitta
+// akkauntga. Mobil operatorlarda ko'p foydalanuvchi bitta IP'ni bo'lishgani
+// uchun IP chegarasi ataylab kengroq qo'yilgan.
+function loginLimiters() {
+  return [
+    rateLimit({ windowMs: FIFTEEN_MINUTES, max: 100 }),
+    rateLimit({
+      windowMs: FIFTEEN_MINUTES,
+      max: 10,
+      keyGenerator: (req) => {
+        const identifier = loginIdentifierKey(req);
+        return identifier && `${req.ip}:${identifier}`;
+      },
+    }),
+    rateLimit({ windowMs: FIFTEEN_MINUTES, max: 30, keyGenerator: loginIdentifierKey }),
+  ];
+}
+
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20 });
 
 /**
  * @openapi
@@ -28,8 +52,14 @@ export const authRouter = Router();
  *     responses:
  *       201: { description: Ro'yxatdan muvaffaqiyatli o'tildi }
  *       409: { description: Telefon raqami band }
+ *       429: { description: Juda ko'p urinish }
  */
-authRouter.post("/parent/register", validateBody(parentRegisterSchema), asyncHandler(controller.registerParent));
+authRouter.post(
+  "/parent/register",
+  registerLimiter,
+  validateBody(parentRegisterSchema),
+  asyncHandler(controller.registerParent),
+);
 
 /**
  * @openapi
@@ -50,8 +80,9 @@ authRouter.post("/parent/register", validateBody(parentRegisterSchema), asyncHan
  *     responses:
  *       200: { description: Muvaffaqiyatli kirildi }
  *       401: { description: Telefon raqami yoki parol noto'g'ri }
+ *       429: { description: Juda ko'p urinish }
  */
-authRouter.post("/parent/login", validateBody(loginSchema), asyncHandler(controller.loginParent));
+authRouter.post("/parent/login", ...loginLimiters(), validateBody(loginSchema), asyncHandler(controller.loginParent));
 
 /**
  * @openapi
@@ -71,9 +102,10 @@ authRouter.post("/parent/login", validateBody(loginSchema), asyncHandler(control
  *               password: { type: string, format: password }
  *     responses:
  *       200: { description: Muvaffaqiyatli kirildi }
- *       401: { description: Telefon raqami yoki parol noto'g'ri }
+ *       401: { description: Kirish ID yoki parol noto'g'ri }
+ *       429: { description: Juda ko'p urinish }
  */
-authRouter.post("/child/login", validateBody(loginSchema), asyncHandler(controller.loginChild));
+authRouter.post("/child/login", ...loginLimiters(), validateBody(loginSchema), asyncHandler(controller.loginChild));
 
 /**
  * @openapi

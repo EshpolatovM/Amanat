@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { router } from './router'
 import { useAuthStore } from './store/authStore'
+import Toaster from './components/ui/Toaster'
+import FullPageLoader from './components/ui/FullPageLoader'
 
 function App() {
   const bootstrap = useAuthStore((state) => state.bootstrap)
@@ -12,14 +14,15 @@ function App() {
   }, [bootstrap])
 
   if (status === 'idle' || status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-paper">
-        <p className="text-sm font-semibold text-ink-soft">Yuklanmoqda...</p>
-      </div>
-    )
+    return <FullPageLoader />
   }
 
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster />
+    </>
+  )
 }
 
 export default App

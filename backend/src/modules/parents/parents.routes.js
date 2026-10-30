@@ -60,7 +60,7 @@ parentsRouter.patch("/me", validateBody(updateParentSchema), asyncHandler(contro
  *               currentPassword: { type: string, format: password }
  *               newPassword: { type: string, format: password }
  *     responses:
- *       200: { description: Parol o'zgartirildi }
- *       401: { description: Joriy parol noto'g'ri }
+ *       200: { description: Parol o'zgartirildi (boshqa qurilmalardagi sessiyalar yopiladi) }
+ *       400: { description: Joriy parol noto'g'ri }
  */
 parentsRouter.patch("/me/password", validateBody(changePasswordSchema), asyncHandler(controller.changePassword));

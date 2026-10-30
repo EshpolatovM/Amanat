@@ -20,6 +20,10 @@ export const dashboardRouter = Router();
  *         schema: { type: string }
  *         description: Faqat ota-ona uchun; berilmasa barcha bolalar bo'yicha umumlashtiriladi
  *     responses:
- *       200: { description: Dashboard ma'lumotlari }
+ *       200:
+ *         description: >
+ *           Joriy oy (APP_TIMEZONE bo'yicha) — totals (turlar bo'yicha jami),
+ *           byCategory (maqsadlar bo'yicha taqsimot), byChild, recent (so'nggi
+ *           10 ta yozuv nomi/izohi bilan)
  */
 dashboardRouter.get("/", authenticate, validateQuery(dashboardQuerySchema), asyncHandler(controller.getDashboard));

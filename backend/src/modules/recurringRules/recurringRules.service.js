@@ -1,10 +1,22 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/response.js";
 import { accessControlService } from "../../lib/access.js";
-import { startOfUtcDay } from "../../utils/date.js";
+import { addUtcDays, todayInAppTz } from "../../utils/date.js";
+
+function laterOf(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
+function earlierOf(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return a < b ? a : b;
+}
 
 export class RecurringRulesService {
-  #serializeRule(rule) {
+  #serializeRule(rule, today = todayInAppTz()) {
     return {
       id: rule.id,
       childId: rule.childId,
@@ -18,6 +30,7 @@ export class RecurringRulesService {
       endDate: rule.endDate,
       comment: rule.comment,
       active: rule.active,
+      nextDate: this.#nextOccurrence(rule, today),
       createdAt: rule.createdAt,
       updatedAt: rule.updatedAt,
     };
@@ -80,9 +93,15 @@ export class RecurringRulesService {
       include: { goal: true },
       orderBy: { createdAt: "asc" },
     });
-    return rules.map((rule) => this.#serializeRule(rule));
+    const today = todayInAppTz();
+    return rules.map((rule) => this.#serializeRule(rule, today));
   }
 
+  // Qoida tahrirlanganda o'zgarish faqat KELAJAKKA ta'sir qiladi: allaqachon
+  // yaratilgan yozuvlar (tarix) qayta yozilmaydi, yangi summa/jadval kursordan
+  // (`generatedUntil`) keyingi kunlarga qo'llanadi. Istisno — sana oralig'ini
+  // aniqlashtirish: oraliqdan chiqib qolgan yozuvlar o'chiriladi, boshlanish
+  // sanasi ertaroqqa surilsa esa qo'shilgan davr to'ldiriladi.
   async updateRule(parentId, id, data) {
     const existing = await this.#findRuleOrThrow(id);
     await accessControlService.assertParentOwnsChild(parentId, existing.childId);
@@ -91,19 +110,76 @@ export class RecurringRulesService {
       await this.#assertGoalBelongsToChild(data.goalId, existing.childId);
     }
 
-    const effectiveStart = data.startDate ?? existing.startDate;
-    const effectiveEnd = data.endDate === undefined ? existing.endDate : data.endDate;
-    if (effectiveEnd && effectiveEnd < effectiveStart) {
+    const next = { ...existing };
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) next[key] = value;
+    }
+
+    // Takrorlanish turi o'zgarsa, qoida ichki jihatdan izchil qolishi shart —
+    // aks holda "har oy" qoidasi `dayOfMonth`siz qolib, noto'g'ri sanalarda yozuv yaratardi.
+    if (next.frequency === "weekly") {
+      if (!next.daysOfWeek?.length) throw new ApiError(400, "Kamida bitta kun tanlanishi kerak");
+      next.dayOfMonth = null;
+    } else {
+      if (!next.dayOfMonth) throw new ApiError(400, "Oyning kuni tanlanishi kerak");
+      next.daysOfWeek = [];
+    }
+    if (next.endDate && next.endDate < next.startDate) {
       throw new ApiError(400, "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas");
     }
 
-    const rule = await prisma.recurringRule.update({ where: { id }, data, include: { goal: true } });
+    const today = todayInAppTz();
+    const yesterday = addUtcDays(today, -1);
+    let cursor = existing.generatedUntil;
 
-    if (rule.active) {
-      await this.generateInstancesForRule(rule);
+    // Pauzadan qaytarilganda yoki tugagan qoida uzaytirilganda oradagi
+    // (to'xtab turgan) kunlar uchun yozuv yaratilmaydi — generatsiya bugundan davom etadi.
+    const resumed = !existing.active && next.active;
+    const reopened =
+      existing.endDate !== null && existing.endDate < today && (next.endDate === null || next.endDate >= today);
+    if ((resumed || reopened) && (!cursor || cursor < yesterday)) {
+      cursor = yesterday;
+    }
+    if (next.endDate && cursor && cursor > next.endDate) {
+      cursor = next.endDate;
     }
 
-    return this.#serializeRule(rule);
+    const startMovedEarlier = next.startDate < existing.startDate;
+
+    const rule = await prisma.$transaction(async (tx) => {
+      const updated = await tx.recurringRule.update({
+        where: { id },
+        data: {
+          goalId: next.goalId,
+          amount: next.amount,
+          frequency: next.frequency,
+          daysOfWeek: next.daysOfWeek,
+          dayOfMonth: next.dayOfMonth,
+          startDate: next.startDate,
+          endDate: next.endDate,
+          comment: next.comment,
+          active: next.active,
+          generatedUntil: cursor,
+        },
+        include: { goal: true },
+      });
+
+      const outsideRange = [{ date: { lt: updated.startDate } }];
+      if (updated.endDate) outsideRange.push({ date: { gt: updated.endDate } });
+      await tx.recurringExpenseInstance.deleteMany({ where: { ruleId: id, OR: outsideRange } });
+
+      if (startMovedEarlier && existing.generatedUntil) {
+        const backfillEnd = earlierOf(earlierOf(addUtcDays(existing.startDate, -1), updated.endDate), today);
+        await this.#materialize(tx, updated, updated.startDate, backfillEnd);
+      }
+
+      if (updated.active) {
+        await this.generateInstancesForRule(updated, today, tx);
+      }
+      return updated;
+    });
+
+    return this.#serializeRule(rule, today);
   }
 
   async deleteRule(parentId, id) {
@@ -131,80 +207,104 @@ export class RecurringRulesService {
     return new Date(Date.UTC(year, month, day));
   }
 
-  // Berilgan qoida uchun startDate'dan bugungi kun (yoki endDate, qaysi bir oldin
-  // bo'lsa) gacha bo'lgan barcha mos sanalar uchun xarajat yozuvlarini generatsiya
-  // qiladi. Idempotent: mavjud (ruleId, date) juftliklari qayta yozilmaydi.
-  // `frequency: weekly` — daysOfWeek'da belgilangan haftaning kunlarida (masalan
-  // "kundalik xarajat"); `frequency: monthly` — dayOfMonth'da belgilangan
-  // sanada (masalan "Kurs puli — har oyning 5-sanasida").
-  async generateInstancesForRule(rule, referenceDate = new Date()) {
-    const today = startOfUtcDay(referenceDate);
-    const start = startOfUtcDay(rule.startDate);
-    const end = rule.endDate && startOfUtcDay(rule.endDate) < today ? startOfUtcDay(rule.endDate) : today;
-
-    if (start > end) return;
-
-    const records = [];
+  // [from, to] oralig'ida qoida jadvaliga mos keladigan barcha sanalar.
+  // `frequency: weekly` — daysOfWeek'dagi hafta kunlari (masalan "kundalik
+  // xarajat"); `frequency: monthly` — har oyning dayOfMonth-sanasi
+  // (masalan "Kurs puli — har oyning 5-sanasida").
+  #occurrences(rule, from, to) {
+    const dates = [];
+    if (!from || !to || from > to) return dates;
 
     if (rule.frequency === "monthly") {
-      let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
-      const endCursor = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
-      while (cursor <= endCursor) {
+      let cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1));
+      while (cursor <= to) {
         const occurrence = this.#resolveMonthlyDate(cursor.getUTCFullYear(), cursor.getUTCMonth(), rule.dayOfMonth);
-        if (occurrence >= start && occurrence <= end) {
-          records.push({
-            ruleId: rule.id,
-            childId: rule.childId,
-            goalId: rule.goalId,
-            amount: rule.amount,
-            date: occurrence,
-          });
-        }
+        if (occurrence >= from && occurrence <= to) dates.push(occurrence);
         cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
       }
-    } else {
-      const daysSet = new Set(rule.daysOfWeek);
-      const cursor = new Date(start);
-      while (cursor <= end) {
-        if (daysSet.has(cursor.getUTCDay())) {
-          records.push({
-            ruleId: rule.id,
-            childId: rule.childId,
-            goalId: rule.goalId,
-            amount: rule.amount,
-            date: new Date(cursor),
-          });
-        }
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-      }
+      return dates;
     }
 
-    if (records.length === 0) return;
+    const days = new Set(rule.daysOfWeek);
+    for (let cursor = new Date(from); cursor <= to; cursor = addUtcDays(cursor, 1)) {
+      if (days.has(cursor.getUTCDay())) dates.push(new Date(cursor));
+    }
+    return dates;
+  }
 
-    await prisma.recurringExpenseInstance.createMany({
-      data: records,
+  // Idempotent: (ruleId, date) unique indeksi tufayli mavjud yozuvlar qayta yaratilmaydi.
+  async #materialize(db, rule, from, to) {
+    const dates = this.#occurrences(rule, from, to);
+    if (dates.length === 0) return;
+    await db.recurringExpenseInstance.createMany({
+      data: dates.map((date) => ({
+        ruleId: rule.id,
+        childId: rule.childId,
+        goalId: rule.goalId,
+        amount: rule.amount,
+        date,
+      })),
       skipDuplicates: true,
     });
   }
 
-  async generateAllDueInstances(referenceDate = new Date()) {
-    const activeRules = await prisma.recurringRule.findMany({ where: { active: true } });
-    for (const rule of activeRules) {
-      await this.generateInstancesForRule(rule, referenceDate);
+  // Keyingi avtomatik yozuv sanasi (qoidalar ro'yxatida "Keyingisi: ..." uchun).
+  #nextOccurrence(rule, today) {
+    if (!rule.active) return null;
+    const from = laterOf(rule.startDate, laterOf(today, rule.generatedUntil && addUtcDays(rule.generatedUntil, 1)));
+    const to = earlierOf(rule.endDate, addUtcDays(from, 62));
+    return this.#occurrences(rule, from, to)[0] ?? null;
+  }
+
+  // Kursordan (`generatedUntil`) keyingi kundan bugungacha (yoki endDate'gacha)
+  // bo'lgan yozuvlarni yaratadi va kursorni suradi.
+  async generateInstancesForRule(rule, today = todayInAppTz(), db = prisma) {
+    const from = laterOf(rule.startDate, rule.generatedUntil && addUtcDays(rule.generatedUntil, 1));
+    const to = earlierOf(rule.endDate, today);
+    if (from > to) return;
+
+    await this.#materialize(db, rule, from, to);
+    await db.recurringRule.updateMany({ where: { id: rule.id }, data: { generatedUntil: to } });
+    rule.generatedUntil = to;
+  }
+
+  #dueRulesWhere(today) {
+    return {
+      active: true,
+      startDate: { lte: today },
+      OR: [{ generatedUntil: null }, { generatedUntil: { lt: today } }],
+    };
+  }
+
+  async generateAllDueInstances(today = todayInAppTz()) {
+    const rules = await prisma.recurringRule.findMany({ where: this.#dueRulesWhere(today) });
+    let failed = 0;
+    for (const rule of rules) {
+      try {
+        await this.generateInstancesForRule(rule, today);
+      } catch (err) {
+        failed += 1;
+        console.error(`Qoida ${rule.id} uchun generatsiya xatoligi:`, err);
+      }
     }
-    return { processed: activeRules.length };
+    return { processed: rules.length, failed };
   }
 
   // Statistika/dashboard so'ralganda shu bolalarga tegishli faol qoidalar
   // bo'yicha hali yaratilmagan yozuvlarni tayyorlab qo'yadi (cron ishlamay
-  // qolgan yoki server yangi ishga tushgan holatlar uchun himoya).
-  async generateDueInstancesForChildren(childIds, referenceDate = new Date()) {
+  // qolgan yoki server yangi ishga tushgan holatlar uchun himoya). Xatolik
+  // bo'lsa ham sahifa mavjud ma'lumot bilan ochilaveradi.
+  async generateDueInstancesForChildren(childIds, today = todayInAppTz()) {
     if (childIds.length === 0) return;
-    const activeRules = await prisma.recurringRule.findMany({
-      where: { active: true, childId: { in: childIds } },
-    });
-    for (const rule of activeRules) {
-      await this.generateInstancesForRule(rule, referenceDate);
+    try {
+      const rules = await prisma.recurringRule.findMany({
+        where: { ...this.#dueRulesWhere(today), childId: { in: childIds } },
+      });
+      for (const rule of rules) {
+        await this.generateInstancesForRule(rule, today);
+      }
+    } catch (err) {
+      console.error("Kundalik xarajat generatsiyasi xatoligi:", err);
     }
   }
 }

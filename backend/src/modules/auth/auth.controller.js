@@ -18,9 +18,12 @@ function setAuthCookies(res, accessToken, refreshToken) {
   res.cookie("refreshToken", refreshToken, cookieOptions(tokenService.refreshTokenMaxAgeMs()));
 }
 
+// Brauzer cookie'ni o'chirishi uchun atributlar (path/secure/sameSite) u
+// qo'yilgandagisi bilan bir xil bo'lishi kerak — maxAge'dan tashqari.
 function clearAuthCookies(res) {
-  res.clearCookie("accessToken", { path: "/" });
-  res.clearCookie("refreshToken", { path: "/" });
+  const { maxAge: _maxAge, ...options } = cookieOptions(0);
+  res.clearCookie("accessToken", options);
+  res.clearCookie("refreshToken", options);
 }
 
 export async function registerParent(req, res) {

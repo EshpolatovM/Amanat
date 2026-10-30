@@ -4,6 +4,8 @@ import { Home, Wallet, BarChart3, User, Plus, HelpCircle } from 'lucide-react'
 import QuickAddExpenseModal from './QuickAddExpenseModal'
 import { isTabActive } from './isTabActive'
 import { getAccent } from './accentTheme'
+import { useAuthStore } from '../../store/authStore'
+import Avatar from '../profile/Avatar'
 
 const TABS = [
   { to: '/', label: 'Bosh sahifa', icon: Home, exact: true },
@@ -21,12 +23,13 @@ const TABS = [
 export default function Sidebar({ status = 'good' }) {
   const { pathname } = useLocation()
   const [isModalOpen, setModalOpen] = useState(false)
+  const user = useAuthStore((state) => state.user)
   const accent = getAccent(status)
 
   return (
     <>
       <aside className="fixed inset-y-4 left-4 z-40 hidden w-72 flex-col rounded-[2rem] border-2 border-line bg-card px-4 py-8 shadow-lg lg:flex">
-        <span className="mb-8 px-2 text-2xl font-serif font-semibold text-ink">Amanat</span>
+        <span className="mb-8 px-2 font-serif text-2xl font-semibold text-ink">Amanat</span>
 
         <button
           type="button"
@@ -35,15 +38,15 @@ export default function Sidebar({ status = 'good' }) {
             mb-6 flex h-16 items-center justify-center gap-2 rounded-2xl
             border-b-2 ${accent.plusBorder} ${accent.plusBg} text-lg font-bold text-white
             shadow-lg transition-all duration-100 ease-in-out
-            hover:translate-y-px hover:border-b-px
+            hover:translate-y-px hover:border-b
             active:translate-y-0.5 active:border-b-0 active:shadow-none
           `}
         >
-          <Plus className="h-6 w-6" strokeWidth={3} />
+          <Plus className="h-6 w-6" strokeWidth={3} aria-hidden="true" />
           Xarajat qo'shish
         </button>
 
-        <nav className="flex flex-1 flex-col gap-2">
+        <nav aria-label="Asosiy menyu" className="flex flex-1 flex-col gap-2">
           {TABS.map(({ to, label, icon: Icon, exact }) => {
             const active = isTabActive(pathname, to, exact)
             return (
@@ -57,15 +60,27 @@ export default function Sidebar({ status = 'good' }) {
                     : 'flex items-center gap-3 rounded-xl border-2 border-transparent px-4 py-4 text-base font-bold text-ink-soft hover:bg-paper'
                 }
               >
-                <Icon className="h-7 w-7" strokeWidth={active ? 2.5 : 2} />
+                <Icon className="h-7 w-7" strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
                 {label}
               </Link>
             )
           })}
         </nav>
+
+        {user && (
+          <Link to="/profile" className="mt-4 flex items-center gap-3 rounded-2xl border-2 border-line px-3 py-3 hover:bg-paper">
+            <Avatar firstName={user.firstName} lastName={user.lastName} size="sm" className="bg-forest text-white" />
+            <div className="min-w-0">
+              <p className="truncate text-base font-bold text-ink">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="text-sm font-semibold text-ink-soft">Ota-ona</p>
+            </div>
+          </Link>
+        )}
       </aside>
 
-      <QuickAddExpenseModal open={isModalOpen} onClose={() => setModalOpen(false)} />
+      {isModalOpen && <QuickAddExpenseModal onClose={() => setModalOpen(false)} />}
     </>
   )
 }

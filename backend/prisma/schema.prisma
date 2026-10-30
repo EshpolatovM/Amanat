@@ -101,20 +101,26 @@ model PlannedExpense {
 // (TZ 3.4, statistikada "Kundalik xarajat" sifatida hisoblanadi). Belgilansa,
 // generatsiya qilingan yozuvlar shu maqsadning "Maqsadli xarajat"iga qo'shiladi
 // (masalan "Kurs puli" uchun har oyning 5-sanasida avtomatik to'lov).
+//
+// `generatedUntil` — qoida bo'yicha qaysi sanagacha (shu kun ham) yozuvlar
+// yaratib bo'lingani. Generatsiya har doim shu kursordan keyingi kundan
+// boshlanadi, shuning uchun: to'xtatilgan davr qayta yoqilganda orqaga qarab
+// to'ldirilmaydi, jadval/summa o'zgarishi esa faqat kelajakka ta'sir qiladi.
 model RecurringRule {
-  id         String             @id @default(uuid())
-  childId    String             @map("child_id")
-  goalId     String?            @map("goal_id")
-  amount     BigInt
-  frequency  RecurringFrequency @default(weekly)
-  daysOfWeek Int[]              @default([]) @map("days_of_week")
-  dayOfMonth Int?               @map("day_of_month")
-  startDate  DateTime           @db.Date @map("start_date")
-  endDate    DateTime?          @db.Date @map("end_date")
-  comment    String?
-  active     Boolean            @default(true)
-  createdAt  DateTime           @default(now()) @map("created_at")
-  updatedAt  DateTime           @updatedAt @map("updated_at")
+  id             String             @id @default(uuid())
+  childId        String             @map("child_id")
+  goalId         String?            @map("goal_id")
+  amount         BigInt
+  frequency      RecurringFrequency @default(weekly)
+  daysOfWeek     Int[]              @default([]) @map("days_of_week")
+  dayOfMonth     Int?               @map("day_of_month")
+  startDate      DateTime           @db.Date @map("start_date")
+  endDate        DateTime?          @db.Date @map("end_date")
+  comment        String?
+  active         Boolean            @default(true)
+  generatedUntil DateTime?          @db.Date @map("generated_until")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
   child     Child                      @relation(fields: [childId], references: [id], onDelete: Cascade)
   goal      Goal?                      @relation(fields: [goalId], references: [id], onDelete: Restrict)

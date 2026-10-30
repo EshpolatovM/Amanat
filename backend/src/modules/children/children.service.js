@@ -1,9 +1,8 @@
-import bcrypt from "bcrypt";
 import { prisma } from "../../lib/prisma.js";
+import { hashPassword } from "../../lib/password.js";
+import { revokeUserSessions } from "../../lib/sessions.js";
 import { ApiError } from "../../utils/response.js";
 import { accessControlService } from "../../lib/access.js";
-
-const BCRYPT_ROUNDS = 12;
 
 export class ChildrenService {
   #serialize(child) {
@@ -22,10 +21,10 @@ export class ChildrenService {
   async createChild(parentId, data) {
     const existing = await prisma.child.findUnique({ where: { phone: data.phone } });
     if (existing) {
-      throw new ApiError(409, "Bu telefon raqami bilan foydalanuvchi allaqachon mavjud");
+      throw new ApiError(409, "Bu Kirish ID band");
     }
 
-    const passwordHash = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
+    const passwordHash = await hashPassword(data.password);
     const child = await prisma.child.create({
       data: {
         parentId,
@@ -58,7 +57,7 @@ export class ChildrenService {
     if (data.phone) {
       const existing = await prisma.child.findUnique({ where: { phone: data.phone } });
       if (existing && existing.id !== childId) {
-        throw new ApiError(409, "Bu telefon raqami bilan foydalanuvchi allaqachon mavjud");
+        throw new ApiError(409, "Bu Kirish ID band");
       }
     }
 
@@ -69,13 +68,17 @@ export class ChildrenService {
   async deleteChild(parentId, childId) {
     await accessControlService.assertParentOwnsChild(parentId, childId);
     await prisma.child.delete({ where: { id: childId } });
+    await revokeUserSessions(childId);
     return { message: "Bola profili o'chirildi" };
   }
 
+  // Parol yangilanganda bolaning barcha qurilmalaridagi sessiyalar yopiladi —
+  // parol begona qo'lga tushgan bo'lsa, eski sessiya ham ishlamay qoladi.
   async resetChildPassword(parentId, childId, newPassword) {
     await accessControlService.assertParentOwnsChild(parentId, childId);
-    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    const passwordHash = await hashPassword(newPassword);
     await prisma.child.update({ where: { id: childId }, data: { passwordHash } });
+    await revokeUserSessions(childId);
     return { message: "Bola paroli o'zgartirildi" };
   }
 }

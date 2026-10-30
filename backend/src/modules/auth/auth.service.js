@@ -1,10 +1,8 @@
-import bcrypt from "bcrypt";
 import { prisma } from "../../lib/prisma.js";
 import { tokenService } from "../../lib/jwt.js";
+import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { ApiError } from "../../utils/response.js";
 import { normalizePhone } from "../../utils/phone.js";
-
-const BCRYPT_ROUNDS = 12;
 
 export class AuthService {
   #serializeParent(parent) {
@@ -53,7 +51,7 @@ export class AuthService {
       throw new ApiError(409, "Bu telefon raqami bilan foydalanuvchi allaqachon mavjud");
     }
 
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const passwordHash = await hashPassword(password);
     const parent = await prisma.parent.create({
       data: { firstName, lastName, phone, passwordHash },
     });
@@ -64,12 +62,8 @@ export class AuthService {
 
   async loginParent({ phone, password }) {
     const parent = await prisma.parent.findUnique({ where: { phone: normalizePhone(phone) } });
-    if (!parent) {
-      throw new ApiError(401, "Telefon raqami yoki parol noto'g'ri");
-    }
-
-    const valid = await bcrypt.compare(password, parent.passwordHash);
-    if (!valid) {
+    const valid = await verifyPassword(password, parent?.passwordHash);
+    if (!parent || !valid) {
       throw new ApiError(401, "Telefon raqami yoki parol noto'g'ri");
     }
 
@@ -79,13 +73,9 @@ export class AuthService {
 
   async loginChild({ phone, password }) {
     const child = await prisma.child.findUnique({ where: { phone } });
-    if (!child) {
-      throw new ApiError(401, "Telefon raqami yoki parol noto'g'ri");
-    }
-
-    const valid = await bcrypt.compare(password, child.passwordHash);
-    if (!valid) {
-      throw new ApiError(401, "Telefon raqami yoki parol noto'g'ri");
+    const valid = await verifyPassword(password, child?.passwordHash);
+    if (!child || !valid) {
+      throw new ApiError(401, "Kirish ID yoki parol noto'g'ri");
     }
 
     const tokens = await this.#issueTokens(child, "child");

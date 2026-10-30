@@ -3,116 +3,109 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createChildWithGeneratedCredentials } from '../../api/children'
+import { UserPlus } from 'lucide-react'
+import { childrenKeys, createChildWithGeneratedCredentials } from '../../api/children'
 import { extractErrorMessage } from '../../lib/apiClient'
+import { ageSchema, nameSchema } from '../../lib/validation'
 import TextField from '../forms/TextField'
-import CredentialChip from '../profile/CredentialChip'
+import Button from '../ui/Button'
+import Modal from '../ui/Modal'
+import CredentialsNotice from './CredentialsNotice'
 
 const addChildSchema = z.object({
-  firstName: z.string().trim().min(1, 'Ism kiritilishi shart'),
-  lastName: z.string().trim().min(1, 'Familiya kiritilishi shart'),
-  age: z.coerce.number().int().min(1, "Yosh noto'g'ri").max(25, "Yosh noto'g'ri"),
+  firstName: nameSchema('Ism'),
+  lastName: nameSchema('Familiya'),
+  age: ageSchema,
 })
 
 export default function AddChildForm() {
   const [isOpen, setIsOpen] = useState(false)
-  const [createdCredentials, setCreatedCredentials] = useState(null)
+  const [created, setCreated] = useState(null)
   const queryClient = useQueryClient()
 
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     setError,
   } = useForm({ resolver: zodResolver(addChildSchema) })
 
   const createMutation = useMutation({
     mutationFn: createChildWithGeneratedCredentials,
-    onSuccess: ({ credentials }) => {
-      setCreatedCredentials(credentials)
-      queryClient.invalidateQueries({ queryKey: ['children'] })
+    onSuccess: ({ child, credentials }) => {
+      setCreated({ childName: child.firstName, ...credentials })
+      queryClient.invalidateQueries({ queryKey: childrenKeys.list })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       reset()
       setIsOpen(false)
     },
-    onError: (error) => {
-      setError('root', { message: extractErrorMessage(error) })
-    },
+    onError: (error) => setError('root', { message: extractErrorMessage(error) }),
   })
-
-  async function onSubmit(values) {
-    createMutation.mutate(values)
-  }
 
   return (
     <div className="flex flex-col gap-4">
-      {createdCredentials && (
-        <div className="rounded-2xl border-2 border-forest bg-forest-soft p-4">
-          <p className="text-lg font-bold text-ink">Bola profili yaratildi</p>
-          <div className="mt-3 flex flex-col gap-2">
-            <CredentialChip label="Kirish ID" value={createdCredentials.loginId} tone="forest" />
-            <CredentialChip label="Parol" value={createdCredentials.password} tone="forest" />
-          </div>
-          <p className="mt-3 text-sm font-semibold text-alert">
-            Parolni saqlab qo'ying — u qayta ko'rsatilmaydi.
-          </p>
-          <button
-            type="button"
-            onClick={() => setCreatedCredentials(null)}
-            className="mt-3 text-base font-semibold text-forest underline transition-colors hover:text-forest"
-          >
-            Yopish
-          </button>
-        </div>
-      )}
-
       {!isOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="
-            h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-base font-bold text-white
-            shadow-lg transition-all duration-100 ease-in-out
-            hover:translate-y-px hover:border-b-px
-            active:translate-y-0.5 active:border-b-0 active:shadow-none
-          "
-        >
-          + Bola qo'shish
-        </button>
+        <Button onClick={() => setIsOpen(true)} fullWidth>
+          <UserPlus className="h-5 w-5" aria-hidden="true" />
+          Farzand qo'shish
+        </Button>
       )}
 
       {isOpen && (
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-          <TextField label="Ism" error={errors.firstName?.message} {...register('firstName')} />
-          <TextField label="Familiya" error={errors.lastName?.message} {...register('lastName')} />
-          <TextField label="Yosh" type="number" error={errors.age?.message} {...register('age')} />
+        <form
+          onSubmit={handleSubmit((values) => createMutation.mutate(values))}
+          className="flex flex-col gap-4 rounded-2xl border-2 border-line bg-paper p-4"
+          noValidate
+        >
+          <p className="text-base font-semibold text-ink-soft">
+            Farzandingiz uchun kirish ID va parol avtomatik yaratiladi — u o'z xarajatlarini faqat ko'ra oladi.
+          </p>
+          <TextField label="Ism" autoComplete="off" maxLength={50} error={errors.firstName?.message} {...register('firstName')} />
+          <TextField label="Familiya" autoComplete="off" maxLength={50} error={errors.lastName?.message} {...register('lastName')} />
+          <TextField
+            label="Yoshi"
+            type="number"
+            inputMode="numeric"
+            min="1"
+            max="25"
+            error={errors.age?.message}
+            {...register('age')}
+          />
 
-          {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
+          {errors.root?.message && (
+            <p role="alert" className="text-base font-semibold text-alert">
+              {errors.root.message}
+            </p>
+          )}
 
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="
-                h-14 flex-1 rounded-2xl border-b-2 border-forest-dark bg-forest text-base font-bold text-white
-                shadow-lg transition-all duration-100 ease-in-out
-                hover:translate-y-px hover:border-b-px
-                active:translate-y-0.5 active:border-b-0 active:shadow-none
-                disabled:opacity-70
-              "
-            >
-              {isSubmitting ? 'Kuting...' : 'ID va parol yaratish'}
-            </button>
-            <button
-              type="button"
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button type="submit" loading={createMutation.isPending} className="sm:flex-1">
+              ID va parol yaratish
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => setIsOpen(false)}
-              className="h-14 flex-1 rounded-2xl border-2 border-line text-base font-bold text-ink-soft transition-colors hover:bg-paper"
+              disabled={createMutation.isPending}
+              className="sm:flex-1"
             >
               Bekor qilish
-            </button>
+            </Button>
           </div>
         </form>
       )}
+
+      <Modal open={Boolean(created)} onClose={() => setCreated(null)} title="Farzand profili yaratildi">
+        {created && (
+          <div className="flex flex-col gap-4">
+            <p className="text-base font-semibold text-ink-soft">
+              {created.childName} Amanat'ga «Bola» bo'limidan shu ma'lumotlar bilan kiradi:
+            </p>
+            <CredentialsNotice childName={created.childName} loginId={created.loginId} password={created.password} />
+            <Button onClick={() => setCreated(null)}>Saqlab oldim</Button>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

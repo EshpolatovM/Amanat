@@ -1,20 +1,15 @@
 import { formatMoney } from '../../lib/money'
 import { EXPENSE_TYPE_STYLES } from './expenseTypeStyles'
 
-export default function StatCard({ type, amount, variant = 'parent' }) {
+// amanat-design-system.md §4 — holat kartasi (qalin rangli border + och fon).
+// Telefonda bir qatorda (nom ↔ summa), kattaroq ekranda ustun ko'rinishida.
+export default function StatCard({ type, amount }) {
   const style = EXPENSE_TYPE_STYLES[type]
-  const isChild = variant === 'child'
 
   return (
-    <div
-      className={
-        isChild
-          ? `rounded-[1.75rem] border-4 ${style.border} ${style.bg} p-4`
-          : `rounded-2xl border-2 ${style.border} ${style.bg} p-4`
-      }
-    >
+    <div className={`flex items-center justify-between gap-3 rounded-2xl border-2 ${style.border} ${style.bg} px-4 py-3 sm:flex-col sm:items-start sm:justify-start sm:p-4 xl:flex-row xl:items-center xl:justify-between`}>
       <p className={`text-base font-bold ${style.text}`}>{style.label}</p>
-      <p className="mt-1 text-2xl font-bold text-ink">{formatMoney(amount)}</p>
+      <p className="text-xl font-bold text-ink sm:text-2xl">{formatMoney(amount)}</p>
     </div>
   )
 }

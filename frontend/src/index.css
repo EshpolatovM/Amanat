@@ -11,6 +11,9 @@
   --color-forest-soft: #E7EEE7;
   --color-bronze: #B8895B;
   --color-bronze-dark: #966B44;
+  /* Bronza fon/yuzalardagi MATN va bronza tugma soyasi uchun: bronze-dark
+     bronze-soft ustida 3.9:1 (WCAG AA'dan past), bronze-ink esa 5.4:1. */
+  --color-bronze-ink: #7A5636;
   --color-bronze-soft: #F3E9DA;
   --color-alert: #A44A3F;
   --color-alert-dark: #82372E;
@@ -21,10 +24,17 @@
 }
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Modal ochilib sahifa aylantirish bloklanganda kontent o'ngga "sakramasligi" uchun */
+    scrollbar-gutter: stable;
+  }
+
   body {
     background-color: var(--color-paper);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
   }
 
   button:not(:disabled),
@@ -38,5 +48,17 @@
   button:disabled,
   [aria-disabled='true'] {
     cursor: not-allowed;
+  }
+
+  /* Klaviatura bilan yuruvchilar uchun aniq fokus halqasi (sichqoncha bosishda ko'rinmaydi) */
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-forest) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 }

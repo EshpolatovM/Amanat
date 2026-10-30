@@ -1,10 +1,30 @@
 import { create } from 'zustand'
-import { apiClient, extractErrorMessage } from '../lib/apiClient'
+import { apiClient, extractErrorMessage, setSessionExpiredHandler } from '../lib/apiClient'
+import { queryClient } from '../lib/queryClient'
 
-export const useAuthStore = create((set) => ({
+// Oilada bitta qurilmadan ota-ona ham, bola ham kirishi mumkin — keshda oldingi
+// foydalanuvchining ma'lumoti (masalan ['dashboard','all']) qolib ketmasligi
+// uchun har kirish/chiqishda React Query keshi tozalanadi.
+function resetClientCache() {
+  queryClient.clear()
+}
+
+async function authenticate(set, request) {
+  try {
+    const { data } = await request()
+    resetClientCache()
+    set({ user: data.data.user, status: 'authenticated', notice: null })
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error: extractErrorMessage(error) }
+  }
+}
+
+export const useAuthStore = create((set, get) => ({
   user: null,
   status: 'idle', // idle | loading | authenticated | unauthenticated
-  error: null,
+  // Login sahifasida bir marta ko'rsatiladigan xabar (masalan sessiya tugaganda)
+  notice: null,
 
   async bootstrap() {
     set({ status: 'loading' })
@@ -16,55 +36,42 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  async loginParent(phone, password) {
-    set({ error: null })
-    try {
-      const { data } = await apiClient.post('/auth/parent/login', { phone, password })
-      set({ user: data.data.user, status: 'authenticated' })
-      return true
-    } catch (error) {
-      set({ error: extractErrorMessage(error) })
-      return false
-    }
+  loginParent(phone, password) {
+    return authenticate(set, () => apiClient.post('/auth/parent/login', { phone, password }))
   },
 
-  async loginChild(phone, password) {
-    set({ error: null })
-    try {
-      const { data } = await apiClient.post('/auth/child/login', { phone, password })
-      set({ user: data.data.user, status: 'authenticated' })
-      return true
-    } catch (error) {
-      set({ error: extractErrorMessage(error) })
-      return false
-    }
+  loginChild(phone, password) {
+    return authenticate(set, () => apiClient.post('/auth/child/login', { phone, password }))
   },
 
-  async registerParent(payload) {
-    set({ error: null })
-    try {
-      const { data } = await apiClient.post('/auth/parent/register', payload)
-      set({ user: data.data.user, status: 'authenticated' })
-      return true
-    } catch (error) {
-      set({ error: extractErrorMessage(error) })
-      return false
-    }
+  registerParent(payload) {
+    return authenticate(set, () => apiClient.post('/auth/parent/register', payload))
   },
 
   async logout() {
     try {
       await apiClient.post('/auth/logout')
+    } catch {
+      // server javob bermasa ham qurilmadan chiqamiz
     } finally {
-      set({ user: null, status: 'unauthenticated' })
+      resetClientCache()
+      set({ user: null, status: 'unauthenticated', notice: null })
     }
+  },
+
+  sessionExpired() {
+    if (get().status !== 'authenticated') return
+    resetClientCache()
+    set({ user: null, status: 'unauthenticated', notice: 'Sessiya muddati tugadi — iltimos, qaytadan kiring.' })
+  },
+
+  clearNotice() {
+    set({ notice: null })
   },
 
   updateUser(patch) {
     set((state) => ({ user: state.user ? { ...state.user, ...patch } : state.user }))
   },
-
-  clearError() {
-    set({ error: null })
-  },
 }))
+
+setSessionExpiredHandler(() => useAuthStore.getState().sessionExpired())

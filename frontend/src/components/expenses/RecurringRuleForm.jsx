@@ -1,63 +1,101 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchGoals, createGoal, goalsKeys } from '../../api/goals'
-import { createRecurringRule, recurringRulesKeys } from '../../api/recurringRules'
-import { dashboardKeys } from '../../api/dashboard'
+import { Info } from 'lucide-react'
+import { fetchGoals, goalsKeys, resolveGoalId } from '../../api/goals'
+import { createRecurringRule, updateRecurringRule } from '../../api/recurringRules'
 import { extractErrorMessage } from '../../lib/apiClient'
+import { invalidateChildData } from '../../lib/invalidate'
+import { formatDayLabel, todayIso, toIsoDate } from '../../lib/date'
+import { formatMoney } from '../../lib/money'
+import { commentSchema, dateSchema, moneySchema } from '../../lib/validation'
+import { toast } from '../../store/toastStore'
 import TextField from '../forms/TextField'
+import SelectField from '../forms/SelectField'
+import MoneyField from '../forms/MoneyField'
+import Button from '../ui/Button'
+import GoalFields, { NEW_GOAL } from './GoalFields'
 
 // Backend `daysOfWeek` qiymatlari JS `Date#getUTCDay()` konventsiyasiga mos: 0=Yak..6=Shan.
-const DAYS = [
-  { value: 1, label: 'Dush' },
-  { value: 2, label: 'Sesh' },
-  { value: 3, label: 'Chor' },
-  { value: 4, label: 'Pay' },
-  { value: 5, label: 'Juma' },
-  { value: 6, label: 'Shan' },
-  { value: 0, label: 'Yak' },
+const WEEK_DAYS = [
+  { value: 1, label: 'Dush', full: 'Dushanba' },
+  { value: 2, label: 'Sesh', full: 'Seshanba' },
+  { value: 3, label: 'Chor', full: 'Chorshanba' },
+  { value: 4, label: 'Pay', full: 'Payshanba' },
+  { value: 5, label: 'Juma', full: 'Juma' },
+  { value: 6, label: 'Shan', full: 'Shanba' },
+  { value: 0, label: 'Yak', full: 'Yakshanba' },
 ]
 
-const NEW_GOAL = '__new__'
+const DEFAULT_DAYS = [1, 2, 3, 4, 5]
+const MONTH_DAYS = Array.from({ length: 31 }, (_, index) => index + 1)
 
 const schema = z
   .object({
-    goalId: z.string().optional(),
-    newGoalName: z.string().trim().optional(),
-    amount: z.coerce.number().int().positive("Summa 0 dan katta bo'lishi kerak"),
+    goalId: z.string(),
+    newGoalName: z.string().trim().max(60, 'Maqsad nomi 60 belgidan oshmasligi kerak').optional(),
+    amount: moneySchema,
     frequency: z.enum(['weekly', 'monthly']),
-    dayOfMonth: z.preprocess(
-      (val) => (val === '' || val === undefined ? undefined : val),
-      z.coerce.number().int().min(1).max(31).optional(),
-    ),
-    startDate: z.string().min(1, 'Boshlanish sanasi kiritilishi shart'),
-    endDate: z.string().optional(),
-    comment: z.string().trim().max(500).optional(),
+    daysOfWeek: z.array(z.number()),
+    dayOfMonth: z.string(),
+    startDate: dateSchema('Boshlanish sanasi kiritilishi shart'),
+    endDate: z.string(),
+    comment: commentSchema.optional(),
   })
-  .refine((data) => data.goalId !== NEW_GOAL || (data.newGoalName?.length ?? 0) > 0, {
-    message: 'Yangi maqsad nomini kiriting',
-    path: ['newGoalName'],
-  })
-  .refine((data) => data.frequency !== 'monthly' || !!data.dayOfMonth, {
-    message: 'Oyning kuni tanlanishi kerak',
-    path: ['dayOfMonth'],
-  })
-  .refine((data) => !data.endDate || data.endDate >= data.startDate, {
-    message: "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
-    path: ['endDate'],
+  .superRefine((data, ctx) => {
+    if (data.goalId === NEW_GOAL && !data.newGoalName) {
+      ctx.addIssue({ code: 'custom', path: ['newGoalName'], message: 'Yangi maqsad nomini kiriting' })
+    }
+    if (data.frequency === 'weekly' && data.daysOfWeek.length === 0) {
+      ctx.addIssue({ code: 'custom', path: ['daysOfWeek'], message: 'Kamida bitta kunni tanlang' })
+    }
+    if (data.frequency === 'monthly' && !data.dayOfMonth) {
+      ctx.addIssue({ code: 'custom', path: ['dayOfMonth'], message: 'Oyning qaysi kuni ekanini tanlang' })
+    }
+    if (data.endDate && data.endDate < data.startDate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['endDate'],
+        message: "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
+      })
+    }
   })
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
-const DEFAULT_DAYS = [1, 2, 3, 4, 5]
+function defaultValues(rule) {
+  return {
+    goalId: rule?.goalId ?? '',
+    newGoalName: '',
+    amount: rule?.amount ?? '',
+    frequency: rule?.frequency ?? 'weekly',
+    daysOfWeek: rule?.frequency === 'weekly' ? rule.daysOfWeek : DEFAULT_DAYS,
+    dayOfMonth: rule?.dayOfMonth ? String(rule.dayOfMonth) : '',
+    startDate: rule ? toIsoDate(rule.startDate) : todayIso(),
+    endDate: rule?.endDate ? toIsoDate(rule.endDate) : '',
+    comment: rule?.comment ?? '',
+  }
+}
 
-export default function RecurringRuleForm({ childId, onSuccess }) {
+function FrequencyOption({ value, label, active, register }) {
+  return (
+    <label
+      className={`flex min-h-12 flex-1 items-center justify-center rounded-2xl border-2 px-3 py-2 text-center text-base font-bold transition-colors has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-forest/30 ${
+        active ? 'border-bronze bg-bronze-soft text-bronze-ink' : 'border-line bg-card text-ink-soft hover:bg-paper'
+      }`}
+    >
+      <input type="radio" value={value} {...register('frequency')} className="sr-only" />
+      {label}
+    </label>
+  )
+}
+
+// `rule` berilsa — tahrirlash rejimi. O'zgarishlar faqat kelajakdagi
+// yozuvlarga ta'sir qiladi (backend `generatedUntil` kursori).
+export default function RecurringRuleForm({ childId, rule, onSuccess }) {
+  const isEdit = Boolean(rule)
   const queryClient = useQueryClient()
-  const [days, setDays] = useState(DEFAULT_DAYS)
-  const [daysError, setDaysError] = useState(null)
 
-  const { data: goals } = useQuery({
+  const { data: goals, isLoading: goalsLoading } = useQuery({
     queryKey: goalsKeys.list(childId),
     queryFn: () => fetchGoals(childId),
     enabled: !!childId,
@@ -65,152 +103,113 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
 
   const {
     register,
+    control,
     handleSubmit,
-    watch,
     reset,
-    formState: { errors, isSubmitting },
+    setValue,
+    formState: { errors },
     setError,
-  } = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      goalId: '',
-      newGoalName: '',
-      amount: '',
-      frequency: 'weekly',
-      dayOfMonth: '',
-      startDate: todayIso(),
-      endDate: '',
-      comment: '',
-    },
-  })
+  } = useForm({ resolver: zodResolver(schema), defaultValues: defaultValues(rule) })
 
-  const selectedGoalId = watch('goalId')
-  const frequency = watch('frequency')
+  const [selectedGoalId, frequency, days, amount, startDate, endDate] = useWatch({
+    control,
+    name: ['goalId', 'frequency', 'daysOfWeek', 'amount', 'startDate', 'endDate'],
+  })
 
   const mutation = useMutation({
     mutationFn: async (values) => {
       let goalId = values.goalId
       if (goalId === NEW_GOAL) {
-        const goal = await createGoal(childId, values.newGoalName.trim())
-        goalId = goal.id
+        goalId = await resolveGoalId(childId, goals, values.newGoalName)
       }
-      return createRecurringRule(childId, {
-        goalId: goalId || undefined,
+      const payload = {
+        goalId: goalId || (isEdit ? null : undefined),
         amount: values.amount,
         frequency: values.frequency,
-        daysOfWeek: values.frequency === 'weekly' ? days : undefined,
-        dayOfMonth: values.frequency === 'monthly' ? values.dayOfMonth : undefined,
+        daysOfWeek: values.frequency === 'weekly' ? values.daysOfWeek : undefined,
+        dayOfMonth: values.frequency === 'monthly' ? Number(values.dayOfMonth) : undefined,
         startDate: values.startDate,
-        endDate: values.endDate || undefined,
-        comment: values.comment || undefined,
-      })
+        endDate: values.endDate || (isEdit ? null : undefined),
+        comment: values.comment || (isEdit ? null : undefined),
+      }
+      return isEdit ? updateRecurringRule(rule.id, payload) : createRecurringRule(childId, payload)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: goalsKeys.list(childId) })
-      queryClient.invalidateQueries({ queryKey: recurringRulesKeys.list(childId) })
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.detail(childId) })
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.detail(undefined) })
-      reset({
-        goalId: '',
-        newGoalName: '',
-        amount: '',
-        frequency: 'weekly',
-        dayOfMonth: '',
-        startDate: todayIso(),
-        endDate: '',
-        comment: '',
-      })
-      setDays(DEFAULT_DAYS)
+      invalidateChildData(queryClient, childId)
+      toast.success(isEdit ? 'Qoida yangilandi' : 'Qoida saqlandi — xarajatlar endi avtomatik qo\'shiladi')
+      if (!isEdit) reset(defaultValues())
       onSuccess?.()
     },
-    onError: (error) => setError('root', { message: extractErrorMessage(error) }),
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: goalsKeys.list(childId) })
+      setError('root', { message: extractErrorMessage(error) })
+    },
   })
 
   function toggleDay(value) {
-    setDays((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value].sort()))
+    const next = days.includes(value) ? days.filter((day) => day !== value) : [...days, value].sort((a, b) => a - b)
+    setValue('daysOfWeek', next, { shouldValidate: Boolean(errors.daysOfWeek) })
   }
 
-  function onSubmit(values) {
-    if (values.frequency === 'weekly' && days.length === 0) {
-      setDaysError('Kamida bitta kun tanlang')
-      return
-    }
-    setDaysError(null)
-    mutation.mutate(values)
+  const weeklyTotal =
+    frequency === 'weekly' && amount && days.length > 0 ? (BigInt(amount) * BigInt(days.length)).toString() : null
+  const today = todayIso()
+  const startsInPast = !isEdit && startDate && startDate < today
+  // Tahrirlashda sana oralig'i o'zgarishining oqibatlari (backend shunday ishlaydi):
+  const startMovedEarlier = isEdit && startDate && startDate < toIsoDate(rule.startDate)
+  const endsInPast = isEdit && endDate && endDate < today
+
+  let startHint
+  if (startsInPast) {
+    startHint = `O'tgan kun tanlandi — ${formatDayLabel(startDate)}dan bugungacha bo'lgan xarajatlar ham darhol qo'shiladi.`
+  } else if (startMovedEarlier) {
+    startHint = "Sana ertaroqqa surildi — qo'shilgan davr uchun xarajatlar ham yoziladi."
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold text-ink">Maqsad (ixtiyoriy)</span>
-        <select
-          {...register('goalId')}
-          value={selectedGoalId}
-          className="h-14 rounded-2xl border-2 border-line bg-card px-4 text-lg text-ink outline-none focus:border-forest"
-        >
-          <option value="">— Kundalik xarajat (maqsadsiz) —</option>
-          {goals?.map((goal) => (
-            <option key={goal.id} value={goal.id}>
-              {goal.name}
-            </option>
-          ))}
-          <option value={NEW_GOAL}>+ Yangi maqsad</option>
-        </select>
-        <span className="text-sm font-semibold text-ink-soft">
-          Maqsad tanlansa (masalan "Kurs puli"), summa avtomatik shu maqsadga qo'shiladi.
-        </span>
-      </label>
-
-      {selectedGoalId === NEW_GOAL && (
-        <TextField
-          label="Yangi maqsad nomi"
-          placeholder="Masalan: Kurs puli"
-          error={errors.newGoalName?.message}
-          {...register('newGoalName')}
-        />
+    <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="flex flex-col gap-4" noValidate>
+      {isEdit && (
+        <p className="flex gap-2 rounded-2xl border-2 border-line bg-paper p-3 text-sm font-semibold text-ink-soft">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          O'zgarishlar faqat bundan keyingi yozuvlarga ta'sir qiladi — avval qo'shilgan xarajatlar o'zgarmaydi.
+        </p>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold text-ink">Takrorlanish</span>
+      <GoalFields
+        goals={goals}
+        isLoading={goalsLoading}
+        register={register}
+        errors={errors}
+        selectedGoalId={selectedGoalId}
+        optional
+        hint={'Maqsad tanlansa (masalan "Kurs puli"), summa shu maqsadga qo\'shiladi.'}
+      />
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-base font-semibold text-ink">Qanchalik tez-tez</legend>
         <div className="flex gap-2">
-          <label
-            className={
-              frequency === 'weekly'
-                ? 'flex-1 cursor-pointer rounded-2xl border-2 border-bronze bg-bronze-soft px-3 py-3 text-center text-sm font-bold text-bronze-dark transition-colors'
-                : 'flex-1 cursor-pointer rounded-2xl border-2 border-line px-3 py-3 text-center text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
-            }
-          >
-            <input type="radio" value="weekly" {...register('frequency')} className="sr-only" />
-            Har hafta
-          </label>
-          <label
-            className={
-              frequency === 'monthly'
-                ? 'flex-1 cursor-pointer rounded-2xl border-2 border-bronze bg-bronze-soft px-3 py-3 text-center text-sm font-bold text-bronze-dark transition-colors'
-                : 'flex-1 cursor-pointer rounded-2xl border-2 border-line px-3 py-3 text-center text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
-            }
-          >
-            <input type="radio" value="monthly" {...register('frequency')} className="sr-only" />
-            Har oy
-          </label>
+          <FrequencyOption value="weekly" label="Har hafta" active={frequency === 'weekly'} register={register} />
+          <FrequencyOption value="monthly" label="Har oy" active={frequency === 'monthly'} register={register} />
         </div>
-      </div>
+      </fieldset>
 
       {frequency === 'weekly' && (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-base font-semibold text-ink">Kunlar</span>
-          <div className="flex flex-wrap gap-2">
-            {DAYS.map((day) => {
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className="mb-1.5 text-base font-semibold text-ink">Qaysi kunlari</legend>
+          <div className="grid grid-cols-7 gap-1.5">
+            {WEEK_DAYS.map((day) => {
               const active = days.includes(day.value)
               return (
                 <button
                   key={day.value}
                   type="button"
                   onClick={() => toggleDay(day.value)}
+                  aria-pressed={active}
+                  aria-label={day.full}
                   className={
                     active
-                      ? 'h-12 w-14 rounded-xl border-2 border-bronze bg-bronze-soft text-sm font-bold text-bronze-dark transition-colors'
-                      : 'h-12 w-14 rounded-xl border-2 border-line text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
+                      ? 'h-12 rounded-xl border-2 border-bronze bg-bronze-soft text-sm font-bold text-bronze-ink transition-colors'
+                      : 'h-12 rounded-xl border-2 border-line bg-card text-sm font-bold text-ink-soft transition-colors hover:bg-paper'
                   }
                 >
                   {day.label}
@@ -218,42 +217,75 @@ export default function RecurringRuleForm({ childId, onSuccess }) {
               )
             })}
           </div>
-          {daysError && <span className="text-base font-semibold text-alert">{daysError}</span>}
-        </div>
+          {errors.daysOfWeek && <p className="text-base font-semibold text-alert">{errors.daysOfWeek.message}</p>}
+        </fieldset>
       )}
 
       {frequency === 'monthly' && (
-        <TextField
-          label="Oyning nechanchi kuni"
-          type="number"
-          min="1"
-          max="31"
-          placeholder="Masalan: 5"
+        <SelectField
+          label="Oyning qaysi kuni"
+          hint="29–31 tanlansa, qisqa oylarda oyning oxirgi kunida qo'shiladi."
           error={errors.dayOfMonth?.message}
           {...register('dayOfMonth')}
-        />
+        >
+          <option value="">Kunni tanlang…</option>
+          {MONTH_DAYS.map((day) => (
+            <option key={day} value={day}>
+              Har oyning {day}-sanasi
+            </option>
+          ))}
+        </SelectField>
       )}
 
-      <TextField label="Summa (so'm)" type="number" min="1" error={errors.amount?.message} {...register('amount')} />
-      <TextField label="Boshlanish sanasi" type="date" error={errors.startDate?.message} {...register('startDate')} />
-      <TextField label="Tugash sanasi (ixtiyoriy)" type="date" error={errors.endDate?.message} {...register('endDate')} />
-      <TextField label="Izoh (ixtiyoriy)" error={errors.comment?.message} {...register('comment')} />
+      <Controller
+        name="amount"
+        control={control}
+        render={({ field, fieldState }) => (
+          <MoneyField
+            label={frequency === 'monthly' ? 'Har oy beriladigan summa' : 'Har safar beriladigan summa'}
+            placeholder="Masalan: 10 000"
+            hint={weeklyTotal ? `Haftasiga jami: ${formatMoney(weeklyTotal)} (${days.length} kun)` : undefined}
+            error={fieldState.error?.message}
+            {...field}
+          />
+        )}
+      />
 
-      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
+      <TextField
+        label="Boshlanish sanasi"
+        type="date"
+        hint={startHint}
+        error={errors.startDate?.message}
+        {...register('startDate')}
+      />
+      <TextField
+        label="Tugash sanasi (ixtiyoriy)"
+        type="date"
+        hint={
+          endsInPast
+            ? "O'tgan sana tanlandi — shu kundan keyin avtomatik qo'shilgan yozuvlar o'chiriladi."
+            : "Bo'sh qoldirilsa, qoida siz to'xtatguningizcha ishlaydi."
+        }
+        error={errors.endDate?.message}
+        {...register('endDate')}
+      />
+      <TextField
+        label="Izoh (ixtiyoriy)"
+        placeholder="Masalan: maktabdagi tushlik uchun"
+        maxLength={500}
+        error={errors.comment?.message}
+        {...register('comment')}
+      />
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="
-          h-14 rounded-2xl border-b-2 border-bronze-dark bg-bronze text-lg font-bold text-white
-          shadow-lg transition-all duration-100 ease-in-out
-          hover:translate-y-px hover:border-b-px
-          active:translate-y-0.5 active:border-b-0 active:shadow-none
-          disabled:opacity-70
-        "
-      >
-        {isSubmitting ? 'Saqlanmoqda...' : 'Qoidani saqlash'}
-      </button>
+      {errors.root?.message && (
+        <p role="alert" className="text-base font-semibold text-alert">
+          {errors.root.message}
+        </p>
+      )}
+
+      <Button type="submit" variant="bronze" loading={mutation.isPending} fullWidth>
+        {isEdit ? "O'zgarishlarni saqlash" : 'Qoidani saqlash'}
+      </Button>
     </form>
   )
 }

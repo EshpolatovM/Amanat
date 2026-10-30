@@ -1,4 +1,5 @@
 import "./lib/bigint.js";
+import "./lib/zod.js";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -10,13 +11,27 @@ import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 
 export const app = express();
 
+app.disable("x-powered-by");
+if (env.trustProxy) {
+  app.set("trust proxy", 1);
+}
+
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+  });
+  next();
+});
+
 app.use(
   cors({
     origin: env.corsOrigin,
     credentials: true,
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 
 app.get("/health", (req, res) => {

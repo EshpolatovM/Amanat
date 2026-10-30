@@ -1,5 +1,4 @@
 import swaggerJsdoc from "swagger-jsdoc";
-import { env } from "./env.js";
 
 class SwaggerConfig {
   constructor() {
@@ -12,7 +11,9 @@ class SwaggerConfig {
           description:
             "Ota-onalar farzandlariga ma'lum maqsad uchun bergan pulini kuzatib borish uchun platforma backend API'si.",
         },
-        servers: [{ url: `http://localhost:${env.port}/api`, description: "Local server" }],
+        // Nisbiy URL — Swagger UI qaysi domen/portda ochilgan bo'lsa, so'rovlar
+        // ham o'sha serverga ketadi (lokal va production'da bir xil ishlaydi).
+        servers: [{ url: "/api" }],
         components: {
           securitySchemes: {
             cookieAuth: {

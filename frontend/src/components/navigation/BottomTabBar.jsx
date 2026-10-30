@@ -22,14 +22,11 @@ function TabLink({ to, label, icon: Icon, active, accent }) {
   return (
     <Link
       to={to}
-      className="flex flex-1 flex-col items-center gap-1 px-2 py-1"
+      className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl py-1"
       aria-current={active ? 'page' : undefined}
     >
-      <Icon
-        className={active ? `h-6 w-6 ${accent.text}` : 'h-6 w-6 text-ink-soft'}
-        strokeWidth={active ? 2.5 : 2}
-      />
-      <span className={active ? `text-xs font-semibold ${accent.text}` : 'text-xs font-semibold text-ink-soft'}>
+      <Icon className={active ? `h-6 w-6 ${accent.text}` : 'h-6 w-6 text-ink-soft'} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
+      <span className={`max-w-full truncate text-[11px] font-semibold whitespace-nowrap min-[380px]:text-xs ${active ? accent.text : 'text-ink-soft'}`}>
         {label}
       </span>
       <span className={active ? `h-0.5 w-4 rounded-full ${accent.indicator}` : 'h-0.5 w-4 rounded-full bg-transparent'} />
@@ -47,8 +44,9 @@ export default function BottomTabBar({ status = 'good' }) {
   return (
     <>
       <nav
-        className="fixed inset-x-4 z-40 mx-auto flex h-20 max-w-md items-center justify-around rounded-full border-2 border-line bg-card px-3 shadow-lg lg:hidden"
-        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+        aria-label="Asosiy menyu"
+        className="fixed inset-x-2 z-40 mx-auto flex h-20 max-w-md items-center justify-around rounded-full border-2 border-line bg-card px-1 shadow-lg lg:hidden"
+        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
         {LEFT_TABS.map((tab) => (
           <TabLink key={tab.to} {...tab} active={isTabActive(pathname, tab.to, tab.exact)} accent={accent} />
@@ -57,16 +55,16 @@ export default function BottomTabBar({ status = 'good' }) {
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          aria-label="Tezkor xarajat qo'shish"
+          aria-label="Xarajat qo'shish"
           className={`
-            -mt-8 flex h-16 w-16 shrink-0 items-center justify-center rounded-full
+            -mt-8 flex h-15 w-15 shrink-0 items-center justify-center rounded-full
             border-b-2 ${accent.plusBorder} ${accent.plusBg} text-white shadow-lg
             transition-all duration-100 ease-in-out
-            hover:translate-y-px hover:border-b-px
+            hover:translate-y-px hover:border-b
             active:translate-y-0.5 active:border-b-0 active:shadow-none
           `}
         >
-          <Plus className="h-8 w-8" strokeWidth={3} />
+          <Plus className="h-8 w-8" strokeWidth={3} aria-hidden="true" />
         </button>
 
         {RIGHT_TABS.map((tab) => (
@@ -74,7 +72,7 @@ export default function BottomTabBar({ status = 'good' }) {
         ))}
       </nav>
 
-      <QuickAddExpenseModal open={isModalOpen} onClose={() => setModalOpen(false)} />
+      {isModalOpen && <QuickAddExpenseModal onClose={() => setModalOpen(false)} />}
     </>
   )
 }

@@ -1,33 +1,48 @@
-import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchGoals, createGoal, goalsKeys } from '../../api/goals'
-import { createPlannedExpense, plannedExpensesKeys } from '../../api/plannedExpenses'
-import { dashboardKeys } from '../../api/dashboard'
+import { fetchGoals, goalsKeys, resolveGoalId } from '../../api/goals'
+import { createPlannedExpense, updatePlannedExpense } from '../../api/plannedExpenses'
 import { extractErrorMessage } from '../../lib/apiClient'
+import { invalidateChildData } from '../../lib/invalidate'
+import { todayIso, toIsoDate } from '../../lib/date'
+import { commentSchema, dateSchema, moneySchema } from '../../lib/validation'
+import { toast } from '../../store/toastStore'
 import TextField from '../forms/TextField'
-
-const NEW_GOAL = '__new__'
+import MoneyField from '../forms/MoneyField'
+import Button from '../ui/Button'
+import GoalFields, { NEW_GOAL } from './GoalFields'
 
 const schema = z
   .object({
-    goalId: z.string().min(1, "Maqsad tanlanishi shart"),
-    newGoalName: z.string().trim().optional(),
-    amount: z.coerce.number().int().positive("Summa 0 dan katta bo'lishi kerak"),
-    date: z.string().min(1, 'Sana kiritilishi shart'),
-    comment: z.string().trim().max(500).optional(),
+    goalId: z.string().min(1, 'Maqsadni tanlang'),
+    newGoalName: z.string().trim().max(60, 'Maqsad nomi 60 belgidan oshmasligi kerak').optional(),
+    amount: moneySchema,
+    date: dateSchema(),
+    comment: commentSchema.optional(),
   })
   .refine((data) => data.goalId !== NEW_GOAL || (data.newGoalName?.length ?? 0) > 0, {
     message: 'Yangi maqsad nomini kiriting',
     path: ['newGoalName'],
   })
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
+function defaultValues(expense) {
+  return {
+    goalId: expense?.goalId ?? '',
+    newGoalName: '',
+    amount: expense?.amount ?? '',
+    date: expense ? toIsoDate(expense.date) : todayIso(),
+    comment: expense?.comment ?? '',
+  }
+}
 
-export default function PlannedExpenseForm({ childId, onSuccess }) {
+// `expense` berilsa — tahrirlash rejimi (PATCH), aks holda yangi yozuv.
+export default function PlannedExpenseForm({ childId, expense, onSuccess }) {
+  const isEdit = Boolean(expense)
   const queryClient = useQueryClient()
-  const { data: goals } = useQuery({
+  const { data: goals, isLoading: goalsLoading } = useQuery({
     queryKey: goalsKeys.list(childId),
     queryFn: () => fetchGoals(childId),
     enabled: !!childId,
@@ -35,90 +50,84 @@ export default function PlannedExpenseForm({ childId, onSuccess }) {
 
   const {
     register,
+    control,
     handleSubmit,
-    watch,
     reset,
-    formState: { errors, isSubmitting },
+    setValue,
+    getValues,
+    formState: { errors },
     setError,
-  } = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: { goalId: '', newGoalName: '', amount: '', date: todayIso(), comment: '' },
-  })
+  } = useForm({ resolver: zodResolver(schema), defaultValues: defaultValues(expense) })
 
-  const selectedGoalId = watch('goalId')
+  const selectedGoalId = useWatch({ control, name: 'goalId' })
+
+  // Bolada hali maqsad yo'q bo'lsa — darhol "yangi maqsad" nomini so'raymiz.
+  useEffect(() => {
+    if (!isEdit && goals && goals.length === 0 && getValues('goalId') === '') {
+      setValue('goalId', NEW_GOAL)
+    }
+  }, [goals, isEdit, getValues, setValue])
 
   const mutation = useMutation({
     mutationFn: async (values) => {
-      let goalId = values.goalId
-      if (goalId === NEW_GOAL) {
-        const goal = await createGoal(childId, values.newGoalName.trim())
-        goalId = goal.id
-      }
-      return createPlannedExpense(childId, {
+      const goalId =
+        values.goalId === NEW_GOAL ? await resolveGoalId(childId, goals, values.newGoalName) : values.goalId
+      const payload = {
         goalId,
         amount: values.amount,
         date: values.date,
-        comment: values.comment || undefined,
-      })
+        comment: values.comment || (isEdit ? null : undefined),
+      }
+      return isEdit ? updatePlannedExpense(expense.id, payload) : createPlannedExpense(childId, payload)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: goalsKeys.list(childId) })
-      queryClient.invalidateQueries({ queryKey: plannedExpensesKeys.list(childId) })
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.detail(childId) })
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.detail(undefined) })
-      reset({ goalId: '', newGoalName: '', amount: '', date: todayIso(), comment: '' })
+      invalidateChildData(queryClient, childId)
+      toast.success(isEdit ? 'Xarajat yangilandi' : "Xarajat qo'shildi")
+      if (!isEdit) reset(defaultValues())
       onSuccess?.()
     },
-    onError: (error) => setError('root', { message: extractErrorMessage(error) }),
+    onError: (error) => {
+      // Maqsad yaratilib, xarajat saqlanmay qolgan bo'lishi mumkin — ro'yxatni yangilaymiz.
+      queryClient.invalidateQueries({ queryKey: goalsKeys.list(childId) })
+      setError('root', { message: extractErrorMessage(error) })
+    },
   })
 
   return (
     <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="flex flex-col gap-4" noValidate>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold text-ink">Maqsad</span>
-        <select
-          {...register('goalId')}
-          className="h-14 rounded-2xl border-2 border-line bg-card px-4 text-lg text-ink outline-none focus:border-forest"
-        >
-          <option value="">Tanlang...</option>
-          {goals?.map((goal) => (
-            <option key={goal.id} value={goal.id}>
-              {goal.name}
-            </option>
-          ))}
-          <option value={NEW_GOAL}>+ Yangi maqsad</option>
-        </select>
-        {errors.goalId && <span className="text-base font-semibold text-alert">{errors.goalId.message}</span>}
-      </label>
+      <GoalFields
+        goals={goals}
+        isLoading={goalsLoading}
+        register={register}
+        errors={errors}
+        selectedGoalId={selectedGoalId}
+      />
 
-      {selectedGoalId === NEW_GOAL && (
-        <TextField
-          label="Yangi maqsad nomi"
-          placeholder="Masalan: Kurs puli"
-          error={errors.newGoalName?.message}
-          {...register('newGoalName')}
-        />
+      <Controller
+        name="amount"
+        control={control}
+        render={({ field, fieldState }) => (
+          <MoneyField label="Summa" placeholder="Masalan: 500 000" error={fieldState.error?.message} {...field} />
+        )}
+      />
+      <TextField label="Sana" type="date" error={errors.date?.message} {...register('date')} />
+      <TextField
+        label="Izoh (ixtiyoriy)"
+        placeholder="Masalan: sentabr oyi uchun"
+        maxLength={500}
+        error={errors.comment?.message}
+        {...register('comment')}
+      />
+
+      {errors.root?.message && (
+        <p role="alert" className="text-base font-semibold text-alert">
+          {errors.root.message}
+        </p>
       )}
 
-      <TextField label="Summa (so'm)" type="number" min="1" error={errors.amount?.message} {...register('amount')} />
-      <TextField label="Sana" type="date" error={errors.date?.message} {...register('date')} />
-      <TextField label="Izoh (ixtiyoriy)" error={errors.comment?.message} {...register('comment')} />
-
-      {errors.root?.message && <p className="text-base font-semibold text-alert">{errors.root.message}</p>}
-
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="
-          h-14 rounded-2xl border-b-2 border-forest-dark bg-forest text-lg font-bold text-white
-          shadow-lg transition-all duration-100 ease-in-out
-          hover:translate-y-px hover:border-b-px
-          active:translate-y-0.5 active:border-b-0 active:shadow-none
-          disabled:opacity-70
-        "
-      >
-        {isSubmitting ? 'Saqlanmoqda...' : "Xarajatni qo'shish"}
-      </button>
+      <Button type="submit" loading={mutation.isPending} fullWidth>
+        {isEdit ? "O'zgarishlarni saqlash" : "Xarajatni qo'shish"}
+      </Button>
     </form>
   )
 }

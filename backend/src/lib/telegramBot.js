@@ -2,15 +2,28 @@ import { Telegraf, Markup } from "telegraf";
 import { env } from "../config/env.js";
 import { passwordResetService } from "../modules/passwordReset/passwordReset.service.js";
 
+const SHARE_BUTTON_TEXT = "📱 Telefon raqamni ulashish";
+
+function contactKeyboard() {
+  return Markup.keyboard([Markup.button.contactRequest(SHARE_BUTTON_TEXT)])
+    .resize()
+    .oneTime();
+}
+
 export function initTelegramBot() {
   if (!env.telegram.botToken) {
     console.warn("TELEGRAM_BOT_TOKEN topilmadi — Telegram bot ishga tushmadi");
     return null;
   }
+  if (!env.telegram.botUsername) {
+    console.warn("TELEGRAM_BOT_USERNAME topilmadi — parolni tiklash havolasi yaratilmaydi");
+  }
 
   const bot = new Telegraf(env.telegram.botToken);
 
   bot.start(async (ctx) => {
+    if (ctx.chat.type !== "private") return;
+
     const requestId = ctx.startPayload?.trim();
     if (!requestId) {
       return ctx.reply("Salom! Bu bot Amanat ilovasida ota-ona parolini tiklash uchun ishlatiladi.");
@@ -22,18 +35,23 @@ export function initTelegramBot() {
     }
 
     return ctx.reply(
-      "Parolni tiklash uchun telefon raqamingizni tasdiqlang.",
-      Markup.keyboard([Markup.button.contactRequest("📱 Telefon raqamni ulashish")])
-        .resize()
-        .oneTime(),
+      `Parolni tiklash uchun pastdagi «${SHARE_BUTTON_TEXT}» tugmasini bosib, raqamingizni tasdiqlang.`,
+      contactKeyboard(),
     );
   });
 
   bot.on("contact", async (ctx) => {
     const contact = ctx.message.contact;
 
-    if (contact.user_id && contact.user_id !== ctx.from.id) {
-      return ctx.reply("Bu raqam sizga tegishli emas.", Markup.removeKeyboard());
+    // Faqat tugma orqali yuborilgan, foydalanuvchining O'Z raqami qabul qilinadi.
+    // Telefon kitobidan ulashilgan begona kontaktda `user_id` bo'lmaydi (yoki
+    // boshqa odamniki bo'ladi) — uni qabul qilsak, istalgan raqam egasining
+    // parolini tiklab, akkauntini egallab olish mumkin bo'lardi.
+    if (contact.user_id !== ctx.from.id) {
+      return ctx.reply(
+        `Faqat o'z raqamingizni «${SHARE_BUTTON_TEXT}» tugmasi orqali yuborishingiz mumkin.`,
+        contactKeyboard(),
+      );
     }
 
     const result = await passwordResetService.handleContactShared({
@@ -50,17 +68,32 @@ export function initTelegramBot() {
       return ctx.reply(messages[result.reason] || messages.not_found, Markup.removeKeyboard());
     }
 
+    const minutes = Math.round(env.passwordReset.otpTtlMs / 60000);
     return ctx.reply(
-      `Tasdiqlash kodingiz: ${result.otp}\n\nBu kodni hech kimga bermang, u 5 daqiqa amal qiladi.`,
+      `Tasdiqlash kodingiz: ${result.otp}\n\nBu kodni hech kimga bermang, u ${minutes} daqiqa amal qiladi.`,
       Markup.removeKeyboard(),
     );
   });
 
-  bot.launch();
-  console.log(`Telegram bot ishga tushdi: @${env.telegram.botUsername}`);
+  // Bitta xabarni qayta ishlashdagi xatolik (masalan DB vaqtincha ishlamasa)
+  // butun botni to'xtatib qo'ymasligi uchun — Telegraf'ning standart
+  // handleError'i xatoni qayta otadi va long polling butunlay to'xtaydi.
+  bot.catch(async (err, ctx) => {
+    console.error("Telegram bot xatoligi:", err);
+    try {
+      await ctx.reply("Xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.");
+    } catch {
+      // javob yuborib bo'lmasa — e'tiborsiz qoldiramiz
+    }
+  });
 
-  process.once("SIGINT", () => bot.stop("SIGINT"));
-  process.once("SIGTERM", () => bot.stop("SIGTERM"));
+  bot
+    .launch(() => {
+      console.log(`Telegram bot ishga tushdi: @${bot.botInfo?.username ?? env.telegram.botUsername}`);
+    })
+    .catch((err) => {
+      console.error("Telegram bot ishga tushmadi:", err.message);
+    });
 
   return bot;
 }

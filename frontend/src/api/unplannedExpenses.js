@@ -11,6 +11,11 @@ export async function createUnplannedExpense(childId, payload) {
   return data.data
 }
 
+export async function updateUnplannedExpense(id, payload) {
+  const { data } = await apiClient.patch(`/unplanned-expenses/${id}`, payload)
+  return data.data
+}
+
 export async function deleteUnplannedExpense(id) {
   await apiClient.delete(`/unplanned-expenses/${id}`)
 }
