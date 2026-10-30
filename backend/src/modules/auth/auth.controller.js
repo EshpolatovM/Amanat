@@ -6,8 +6,11 @@ import { env } from "../../config/env.js";
 function cookieOptions(maxAge) {
   return {
     httpOnly: true,
-    secure: env.cookieSecure,
-    sameSite: "lax",
+    // Frontend (vercel.app) va backend (alohida domen) turli saytlarda bo'lsa,
+    // cross-site so'rovlarda cookie yuborilishi uchun SameSite=None kerak —
+    // u esa faqat Secure (HTTPS) bilan ishlaydi. Lokal dev'da "lax" qoladi.
+    secure: env.isProduction || env.cookieSecure,
+    sameSite: env.isProduction ? "none" : "lax",
     maxAge,
     path: "/",
   };

@@ -3,6 +3,7 @@ import "dotenv/config";
 class AppConfig {
   constructor() {
     this.nodeEnv = process.env.NODE_ENV || "development";
+    this.isProduction = this.nodeEnv === "production";
     this.port = Number(process.env.PORT) || 4000;
     this.databaseUrl = this.#required("DATABASE_URL");
     this.jwt = {

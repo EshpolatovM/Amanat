@@ -1,7 +1,11 @@
 import axios from 'axios'
 
+// Build vaqtidagi qiymat oxirida "/" bo'lsa, so'rov yo'llari "/api//auth/..." bo'lib
+// 404 beradi — shuning uchun oxirgi slash(lar)ni olib tashlaymiz.
+const baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/+$/, '')
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
+  baseURL,
   withCredentials: true,
   timeout: 20_000,
 })

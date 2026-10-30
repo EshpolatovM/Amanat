@@ -25,9 +25,19 @@ app.use((req, res, next) => {
   next();
 });
 
+const allowedOrigins = env.corsOrigin
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: env.corsOrigin,
+    origin: (origin, callback) => {
+      // origin yo'q — server-server yoki curl so'rovi (brauzer emas).
+      if (!origin) return callback(null, true);
+      // Ro'yxatga aniq mos kelmasa CORS header qo'yilmaydi, brauzer so'rovni bloklaydi.
+      callback(null, allowedOrigins.includes(origin.replace(/\/+$/, "")));
+    },
     credentials: true,
   }),
 );
